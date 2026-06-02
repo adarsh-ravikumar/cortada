@@ -8,6 +8,10 @@ Breakdown:
    Deliverables: Syntax, semantics and philosphy
 
 2) Emit C
+  2.1) Lexer
+  2.2) Parser
+  2.3) IR
+  2.4) Codegen
    Deliverables: A dumb compiler that kinda works. Toy programs can be compiled
 
 3) Scope based destruction + Strings
