@@ -129,10 +129,23 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParserRes {
-        self.parse_expression()
+        self.parse_boolean_expression()
     }
 
-    fn parse_expression(&mut self) -> ParserRes {
+    fn parse_boolean_expression(&mut self) -> ParserRes {
+        self.parse_binary_expr(
+            Self::parse_arithmetic_expression,
+            Self::parse_arithmetic_expression,
+            &[
+                TokenKind::LeftAngle,
+                TokenKind::LesserEqual,
+                TokenKind::RightAngle,
+                TokenKind::GreaterEqual,
+            ],
+        )
+    }
+
+    fn parse_arithmetic_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_term,
             Self::parse_term,
@@ -196,7 +209,7 @@ impl<'a> Parser<'a> {
 
             TokenKind::LeftParen => {
                 self.advance();
-                let node = self.parse_expression()?;
+                let node = self.parse_boolean_expression()?;
 
                 if self.matches(TokenKind::RightParen).is_none() {
                     return Err(Diagnostic::new(
