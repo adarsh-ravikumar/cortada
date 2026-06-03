@@ -128,6 +128,8 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
+        self.advance();
+
         Ok(())
     }
 
@@ -231,7 +233,7 @@ impl<'a> Lexer<'a> {
 
         let starting_char = self.peek(0);
 
-        if starting_char != b' ' && starting_char != b'\t' {
+        if starting_char != b' ' && starting_char != b'\t' && self.indentation.is_empty() {
             return Ok(tokens);
         }
 
