@@ -32,6 +32,7 @@ pub enum TokenKind {
     DoubleEqual,
     FatArrow,
     Equal,
+    NotEqual,
     KwrdIf,
     KwrdElif,
     KwrdElse,

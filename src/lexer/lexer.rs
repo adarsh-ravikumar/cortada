@@ -201,6 +201,18 @@ impl<'a> Lexer<'a> {
                 }
             }
 
+            b'!' => {
+                if self.match_char(b'=') {
+                    TokenKind::NotEqual
+                } else {
+                    return Err(Diagnostic::new(
+                        DiagnosticKind::Error,
+                        "Unkown symbol '!'".to_string(),
+                        Span::new(start, self.position),
+                    ));
+                }
+            }
+
             b'\n' => TokenKind::Newline,
 
             b'0'..=b'9' => return Ok(Some(self.tokenize_number(start))),
