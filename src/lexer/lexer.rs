@@ -179,14 +179,14 @@ impl<'a> Lexer<'a> {
                 if self.match_char(b'=') {
                     TokenKind::LesserEqual
                 } else {
-                    TokenKind::Lesser
+                    TokenKind::LeftAngle
                 }
             }
             b'>' => {
                 if self.match_char(b'=') {
                     TokenKind::GreaterEqual
                 } else {
-                    TokenKind::Greater
+                    TokenKind::RightAngle
                 }
             }
             b'=' => {
@@ -302,7 +302,7 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(&mut self) -> Result<Vec<Token>, Diagnostic> {
-        let mut tokens: Vec<Token> = Vec::new();
+        let mut tokens: Vec<Token> = self.track_indent()?;
 
         loop {
             let token = match self.next_token()? {
