@@ -7,6 +7,7 @@ Cortada is a language designed around high-level syntax and ergonomics with nati
 - The memory model is implicit and inferred.
 - Error handling is explicit and performed entirely through results. Failure propogation and handling must remain visible in code.
 - The language will remain strongly and statically typed
+- Abstractions should have minimal or predictable runtime cost
 - All design choices must keep in mind the following NO list
   - No garbage collection
   - No user-facing pointer semantics
