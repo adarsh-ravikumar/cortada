@@ -86,6 +86,36 @@ impl AstPrinter {
 
                 Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
             }
+
+            AstNodeKind::Unary(expr) => {
+                println!(
+                    "{leader}{}{}Unary{}{}",
+                    Style::BOLD,
+                    Style::GREEN,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                println!(
+                    "{}{}├── {}op{}({}{}{})",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::BRIGHT_CYAN,
+                    expr.op,
+                    Style::RESET,
+                );
+
+                let is_terminal = match expr.rhs.kind {
+                    AstNodeKind::Integer(_)
+                    | AstNodeKind::Float(_)
+                    | AstNodeKind::Identifier(_) => true,
+                    _ => false,
+                };
+
+                Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
+            }
         }
     }
 
