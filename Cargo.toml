@@ -3,5 +3,7 @@ name = "cortada"
 version = "0.1.0"
 edition = "2024"
 
+[lints.rust]
+dead_code = "allow"
 
 [dependencies]
