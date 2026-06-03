@@ -88,8 +88,8 @@ impl TokenPrinter {
             }
         }
 
-        print!(
-            "\n{}{} tokens emitted{}",
+        println!(
+            "\n{}{} tokens emitted{}\n",
             Style::BRIGHT_GREEN,
             tokens.len(),
             Style::RESET
