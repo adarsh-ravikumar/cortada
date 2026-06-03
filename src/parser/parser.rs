@@ -1,11 +1,10 @@
-use std::fmt::Binary;
-
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticKind},
     lexer::{Token, TokenKind},
     parser::node::{
         AstNode, AstNodeKind, BinaryExpr, BinaryOp, FloatExpr, IdentifierExpr, IntegerExpr,
+        UnaryExpr, UnaryOp,
     },
     utils::IOFile,
 };
@@ -15,6 +14,8 @@ pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     position: usize,
 }
+
+type ParserRes = Result<Box<AstNode>, Diagnostic>;
 
 impl<'a> Parser<'a> {
     pub fn new(file: &'a IOFile, tokens: &'a Vec<Token>) -> Self {
@@ -51,68 +52,91 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn matches_any(&self, pattern: &[TokenKind]) -> bool {
-        pattern.contains(&self.peek(0).kind)
+    fn matches_any(&self, pattern: &[TokenKind]) -> Option<&Token> {
+        let cur = self.peek(0);
+        if pattern.contains(&cur.kind) {
+            Some(cur)
+        } else {
+            None
+        }
     }
 
-    fn matches(&self, kind: TokenKind) -> bool {
-        self.peek(0).kind == kind
+    fn matches(&self, kind: TokenKind) -> Option<&Token> {
+        let cur = self.peek(0);
+        if cur.kind == kind { Some(cur) } else { None }
     }
 
-    fn parse_expression(&mut self) -> Result<Box<AstNode>, Diagnostic> {
-        let start = self.position;
-        let mut lhs = self.parse_term()?;
+    fn parse_binary_expr(
+        &mut self,
+        lhs_fn: fn(&mut Self) -> ParserRes,
+        rhs_fn: fn(&mut Self) -> ParserRes,
+        pattern: &[TokenKind],
+    ) -> ParserRes {
+        let start = self.peek(0).span.start;
+        let mut lhs = lhs_fn(self)?;
 
-        while self.matches_any(&[TokenKind::Plus, TokenKind::Hyphen]) {
-            let op = match self.advance().kind {
-                TokenKind::Plus => Some(BinaryOp::Add),
-                TokenKind::Hyphen => Some(BinaryOp::Subtract),
-                _ => None,
-            }
-            .unwrap();
+        while let Some(tok) = self.matches_any(pattern) {
+            let op = BinaryOp::from(tok.kind);
+            self.advance();
 
-            let rhs = self.parse_term()?;
+            let rhs = rhs_fn(self)?;
+
+            let end = rhs.span.end;
 
             lhs = Box::new(AstNode::new(
                 AstNodeKind::Binary(BinaryExpr { lhs, op, rhs }),
                 start,
-                self.position,
+                end,
             ))
         }
 
         Ok(lhs)
     }
 
-    fn parse_term(&mut self) -> Result<Box<AstNode>, Diagnostic> {
-        let start = self.position;
-        let mut lhs = self.parse_factor()?;
+    fn parse_expression(&mut self) -> ParserRes {
+        self.parse_binary_expr(
+            Self::parse_term,
+            Self::parse_term,
+            &[TokenKind::Plus, TokenKind::Hyphen],
+        )
+    }
 
-        while self.matches_any(&[TokenKind::Star, TokenKind::FwdSlash]) {
-            let op = match self.advance().kind {
-                TokenKind::Star => Some(BinaryOp::Multiply),
-                TokenKind::FwdSlash => Some(BinaryOp::Divide),
-                _ => None,
-            }
-            .unwrap();
+    fn parse_term(&mut self) -> ParserRes {
+        self.parse_binary_expr(
+            Self::parse_factor,
+            Self::parse_factor,
+            &[TokenKind::Star, TokenKind::FwdSlash],
+        )
+    }
+
+    fn parse_factor(&mut self) -> ParserRes {
+        let start = self.peek(0).span.start;
+
+        if let Some(tok) = self.matches_any(&[TokenKind::Plus, TokenKind::Hyphen]) {
+            let op = UnaryOp::from(tok.kind);
+
+            self.advance();
 
             let rhs = self.parse_factor()?;
 
-            lhs = Box::new(AstNode::new(
-                AstNodeKind::Binary(BinaryExpr { lhs, op, rhs }),
+            let end = rhs.span.end;
+
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::Unary(UnaryExpr { op, rhs }),
                 start,
-                self.position,
-            ))
+                end,
+            )));
         }
 
-        Ok(lhs)
+        self.parse_atom()
     }
 
-    fn parse_factor(&mut self) -> Result<Box<AstNode>, Diagnostic> {
+    fn parse_atom(&mut self) -> ParserRes {
         self.skip_newlines();
 
         let next_tok = self.peek(0);
 
-        let start = self.position;
+        let start = next_tok.span.start;
 
         let kind: AstNodeKind = match next_tok.kind {
             TokenKind::Integer => {
@@ -137,11 +161,11 @@ impl<'a> Parser<'a> {
                 self.advance();
                 let node = self.parse_expression()?;
 
-                if !self.matches(TokenKind::RightParen) {
+                if self.matches(TokenKind::RightParen).is_none() {
                     return Err(Diagnostic::new(
                         DiagnosticKind::Error,
                         format!("Expected ')', got {:?}", self.peek(0).kind),
-                        Span::new(start, self.position),
+                        Span::new(start, self.peek(0).span.end),
                     ));
                 }
 
@@ -154,17 +178,17 @@ impl<'a> Parser<'a> {
                 return Err(Diagnostic::new(
                     DiagnosticKind::Error,
                     format!("Expected int, float or identifier, got {:?}", kind),
-                    Span::new(start, self.position),
+                    Span::new(start, self.peek(0).span.end),
                 ));
             }
         };
 
         self.advance();
 
-        Ok(Box::new(AstNode::new(kind, start, self.position)))
+        Ok(Box::new(AstNode::new(kind, start, self.peek(0).span.end)))
     }
 
-    pub fn parse(&mut self) -> Result<Box<AstNode>, Diagnostic> {
+    pub fn parse(&mut self) -> ParserRes {
         self.skip_newlines();
 
         let res = self.parse_expression()?;

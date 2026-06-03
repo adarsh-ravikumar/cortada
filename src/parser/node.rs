@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::common::Span;
+use crate::{common::Span, lexer::TokenKind};
 
 pub enum BinaryOp {
     Add,
@@ -8,6 +8,19 @@ pub enum BinaryOp {
     Multiply,
     Power,
     Divide,
+}
+
+impl From<TokenKind> for BinaryOp {
+    fn from(value: TokenKind) -> Self {
+        match value {
+            TokenKind::Plus => Self::Add,
+            TokenKind::Hyphen => Self::Subtract,
+            TokenKind::Star => Self::Multiply,
+            TokenKind::DoubleStar => Self::Power,
+            TokenKind::FwdSlash => Self::Divide,
+            _ => panic!("Invalid Binary Operator!"),
+        }
+    }
 }
 
 impl fmt::Display for BinaryOp {
@@ -20,6 +33,35 @@ impl fmt::Display for BinaryOp {
             Self::Divide => write!(f, "/"),
         }
     }
+}
+
+pub enum UnaryOp {
+    Plus,
+    Minus,
+}
+
+impl From<TokenKind> for UnaryOp {
+    fn from(value: TokenKind) -> Self {
+        match value {
+            TokenKind::Plus => Self::Plus,
+            TokenKind::Hyphen => Self::Minus,
+            _ => panic!("Invalid Unary Operator!"),
+        }
+    }
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Plus => write!(f, "+"),
+            Self::Minus => write!(f, "-"),
+        }
+    }
+}
+
+pub struct UnaryExpr {
+    pub op: UnaryOp,
+    pub rhs: Box<AstNode>,
 }
 
 pub struct BinaryExpr {
@@ -45,6 +87,7 @@ pub enum AstNodeKind {
     Float(FloatExpr),
     Identifier(IdentifierExpr),
     Binary(BinaryExpr),
+    Unary(UnaryExpr),
 }
 
 pub struct AstNode {
