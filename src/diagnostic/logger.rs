@@ -82,8 +82,8 @@ impl Logger {
             file.path.to_str().unwrap().to_string()
         ));
 
-        let src = Self::generate_src(file, diag.span.start, diag.span.end);
-        log.push(src);
+        // let src = Self::generate_src(file, diag.span.start, diag.span.end);
+        // log.push(src);
 
         log.join("\n")
     }
