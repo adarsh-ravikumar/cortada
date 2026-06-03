@@ -12,6 +12,8 @@ pub enum BinaryOp {
     GreaterThan,
     LessThanEqual,
     GreaterThanEqual,
+    And,
+    Or,
 }
 
 impl From<TokenKind> for BinaryOp {
@@ -26,6 +28,8 @@ impl From<TokenKind> for BinaryOp {
             TokenKind::LesserEqual => Self::LessThanEqual,
             TokenKind::RightAngle => Self::GreaterThan,
             TokenKind::GreaterEqual => Self::GreaterThanEqual,
+            TokenKind::KwrdAnd => Self::And,
+            TokenKind::KwrdOr => Self::Or,
             _ => panic!("Invalid Binary Operator!"),
         }
     }
@@ -43,6 +47,8 @@ impl fmt::Display for BinaryOp {
             Self::GreaterThan => write!(f, ">"),
             Self::LessThanEqual => write!(f, "<="),
             Self::GreaterThanEqual => write!(f, ">="),
+            Self::And => write!(f, "and"),
+            Self::Or => write!(f, "or"),
         }
     }
 }
@@ -50,6 +56,7 @@ impl fmt::Display for BinaryOp {
 pub enum UnaryOp {
     Plus,
     Minus,
+    Not,
 }
 
 impl From<TokenKind> for UnaryOp {
@@ -57,6 +64,7 @@ impl From<TokenKind> for UnaryOp {
         match value {
             TokenKind::Plus => Self::Plus,
             TokenKind::Hyphen => Self::Minus,
+            TokenKind::KwrdNot => Self::Not,
             _ => panic!("Invalid Unary Operator!"),
         }
     }
@@ -67,6 +75,7 @@ impl fmt::Display for UnaryOp {
         match self {
             Self::Plus => write!(f, "+"),
             Self::Minus => write!(f, "-"),
+            Self::Not => write!(f, "not"),
         }
     }
 }

@@ -129,6 +129,48 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParserRes {
+        self.parse_expression()
+    }
+
+    fn parse_expression(&mut self) -> ParserRes {
+        self.parse_or_expression()
+    }
+
+    fn parse_or_expression(&mut self) -> ParserRes {
+        self.parse_binary_expr(
+            Self::parse_and_expression,
+            Self::parse_and_expression,
+            &[TokenKind::KwrdOr],
+        )
+    }
+
+    fn parse_and_expression(&mut self) -> ParserRes {
+        self.parse_binary_expr(
+            Self::parse_not_expression,
+            Self::parse_not_expression,
+            &[TokenKind::KwrdAnd],
+        )
+    }
+
+    fn parse_not_expression(&mut self) -> ParserRes {
+        let start = self.peek(0).span.start;
+
+        if let Some(tok) = self.matches(TokenKind::KwrdNot) {
+            let op = UnaryOp::from(tok.kind);
+
+            self.advance();
+
+            let rhs = self.parse_not_expression()?;
+
+            let end = rhs.span.end;
+
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::Unary(UnaryExpr { op, rhs }),
+                start,
+                end,
+            )));
+        }
+
         self.parse_boolean_expression()
     }
 
@@ -209,7 +251,7 @@ impl<'a> Parser<'a> {
 
             TokenKind::LeftParen => {
                 self.advance();
-                let node = self.parse_boolean_expression()?;
+                let node = self.parse_or_expression()?;
 
                 if self.matches(TokenKind::RightParen).is_none() {
                     return Err(Diagnostic::new(
