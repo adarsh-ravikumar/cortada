@@ -117,7 +117,7 @@ impl AstPrinter {
                 Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
             }
 
-            AstNodeKind::Statements(expr) => {
+            AstNodeKind::Statements(stmts) => {
                 println!(
                     "{leader}{}{}Statements{}{}",
                     Style::BOLD,
@@ -125,8 +125,93 @@ impl AstPrinter {
                     Style::RESET,
                     Style::RESET_BOLD
                 );
-                for stmt in expr.stmts.iter() {
+                for stmt in stmts.stmts.iter() {
                     Self::print_helper(&stmt, file, level + 1, is_terminal);
+                }
+            }
+
+            AstNodeKind::If(stmt) => {
+                println!(
+                    "{leader}{}{}If{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                // condition
+                println!(
+                    "{}{}├── {}condition",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::MAGENTA,
+                );
+
+                let is_terminal = match stmt.condition.kind {
+                    AstNodeKind::Integer(_)
+                    | AstNodeKind::Float(_)
+                    | AstNodeKind::Identifier(_) => true,
+                    _ => false,
+                };
+
+                Self::print_helper(&stmt.condition, file, level + 2, is_terminal);
+
+                // body
+                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+
+                // elif
+                if !stmt.elif_stmts.is_empty() {
+                    println!(
+                        "{}{}├── {}{}Elif{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::BOLD,
+                        Style::MAGENTA,
+                        Style::RESET,
+                        Style::RESET_BOLD
+                    );
+                }
+
+                for elif_stmt in stmt.elif_stmts.iter() {
+                    // condition
+                    println!(
+                        "{}{}├── {}condition",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 2),
+                        Style::MAGENTA,
+                    );
+
+                    let is_terminal = match stmt.condition.kind {
+                        AstNodeKind::Integer(_)
+                        | AstNodeKind::Float(_)
+                        | AstNodeKind::Identifier(_) => true,
+                        _ => false,
+                    };
+
+                    Self::print_helper(&elif_stmt.condition, file, level + 3, is_terminal);
+
+                    // body
+                    Self::print_helper(&elif_stmt.body, file, level + 2, is_terminal);
+                }
+
+                // else
+                if stmt.else_stmt.is_some() {
+                    println!(
+                        "{}{}├── {}{}Else{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::BOLD,
+                        Style::MAGENTA,
+                        Style::RESET,
+                        Style::RESET_BOLD
+                    );
+
+                    Self::print_helper(
+                        stmt.else_stmt.as_ref().unwrap(),
+                        file,
+                        level + 2,
+                        is_terminal,
+                    );
                 }
             }
         }
