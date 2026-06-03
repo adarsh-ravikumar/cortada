@@ -1,9 +1,10 @@
-use crate::{diagnostic::Logger, lexer::Lexer};
-
 mod common;
 mod diagnostic;
 mod lexer;
+mod pretty;
 mod utils;
+
+use crate::{diagnostic::Logger, lexer::Lexer, pretty::TokenPrinter};
 
 fn main() {
     let file = match utils::IOFile::from_path("./examples/test.ctd") {
@@ -18,5 +19,5 @@ fn main() {
         Err(e) => return println!("{}", Logger::generate_log(&file, e)),
     };
 
-    println!("{lex}");
+    TokenPrinter::print(&toks, &file);
 }
