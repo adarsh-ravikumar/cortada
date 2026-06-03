@@ -76,10 +76,11 @@ impl Logger {
         log.push(diag.to_string());
 
         log.push(format!(
-            "{}-->{} {}",
+            "{}-->{} {} span {}",
             Style::BLUE,
             Style::RESET,
-            file.path.to_str().unwrap().to_string()
+            file.path.to_str().unwrap().to_string(),
+            diag.span
         ));
 
         // let src = Self::generate_src(file, diag.span.start, diag.span.end);
