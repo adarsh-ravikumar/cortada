@@ -245,7 +245,11 @@ impl<'a> Lexer<'a> {
 
         let starting_char = self.peek(0);
 
-        if starting_char != b' ' && starting_char != b'\t' && self.indentation.is_empty() {
+        if starting_char != b' '
+            && starting_char != b'\t'
+            && starting_char != b'\n'
+            && self.indentation.is_empty()
+        {
             return Ok(tokens);
         }
 
@@ -269,6 +273,7 @@ impl<'a> Lexer<'a> {
                     indent += if ch == b' ' { 1 } else { 4 };
                 }
 
+                b'\n' => return Ok(tokens),
                 _ => break,
             }
 
