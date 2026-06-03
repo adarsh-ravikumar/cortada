@@ -1,116 +1,14 @@
-use core::fmt;
-
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticKind},
     lexer::{Token, TokenKind},
-    utils::{IOFile, Style},
+    utils::IOFile,
 };
 
 pub struct Lexer<'a> {
     src: &'a IOFile,
     position: usize,
     indentation: Vec<usize>,
-    pub tokens: Vec<Token>,
-}
-
-impl<'a> fmt::Display for Lexer<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (idx, tok) in self.tokens.iter().enumerate() {
-            match tok.kind {
-                TokenKind::Integer | TokenKind::Float => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{:?}{}({}\"{}\"{})\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::CYAN,
-                    tok.kind,
-                    Style::RESET,
-                    Style::BRIGHT_GREEN,
-                    self.src.view(tok.span.start, tok.span.end),
-                    Style::RESET,
-                )?,
-                TokenKind::Identifier => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{:?}({}\"{}\"{})\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::RESET,
-                    tok.kind,
-                    Style::BRIGHT_GREEN,
-                    self.src.view(tok.span.start, tok.span.end),
-                    Style::RESET,
-                )?,
-                TokenKind::KwrdIf
-                | TokenKind::KwrdElif
-                | TokenKind::KwrdElse
-                | TokenKind::KwrdWhile
-                | TokenKind::KwrdFor
-                | TokenKind::KwrdFn => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{}{:?}{}{}\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::BOLD,
-                    Style::BRIGHT_BLUE,
-                    tok.kind,
-                    Style::RESET,
-                    Style::RESET_BOLD,
-                )?,
-                TokenKind::Newline => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{}{:?}{}{}\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::DIM,
-                    Style::MAGENTA,
-                    tok.kind,
-                    Style::RESET,
-                    Style::RESET_DIM,
-                )?,
-                TokenKind::EOF => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{}{:?}{}{}\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::BOLD,
-                    Style::MAGENTA,
-                    tok.kind,
-                    Style::RESET,
-                    Style::RESET_BOLD,
-                )?,
-                _ => write!(
-                    f,
-                    "{}[{:03}] ({:4}:{:4})\t{}{:?}{}\n",
-                    Style::BRIGHT_BLACK,
-                    idx,
-                    tok.span.start,
-                    tok.span.end,
-                    Style::YELLOW,
-                    tok.kind,
-                    Style::RESET,
-                )?,
-            }
-        }
-
-        write!(
-            f,
-            "\n{}{} tokens emitted{}",
-            Style::BRIGHT_GREEN,
-            self.tokens.len(),
-            Style::RESET
-        )
-    }
 }
 
 impl<'a> Lexer<'a> {
@@ -119,7 +17,6 @@ impl<'a> Lexer<'a> {
             src,
             position: 0,
             indentation: vec![0],
-            tokens: Vec::new(),
         }
     }
 
@@ -325,15 +222,17 @@ impl<'a> Lexer<'a> {
         Ok(Some(Token::new(tok_type, start, self.position)))
     }
 
-    fn track_indent(&mut self) -> Result<(), Diagnostic> {
+    fn track_indent(&mut self) -> Result<Vec<Token>, Diagnostic> {
         let start = self.position;
+
+        let mut tokens: Vec<Token> = Vec::new();
 
         let mut indent: usize = 0;
 
         let starting_char = self.peek(0);
 
         if starting_char != b' ' && starting_char != b'\t' {
-            return Ok(());
+            return Ok(tokens);
         }
 
         let char_to_diagnostics = |ch: u8| if ch == b' ' { "<space>" } else { "<tab>" };
@@ -365,13 +264,12 @@ impl<'a> Lexer<'a> {
         let current = *self.indentation.last().unwrap();
 
         if indent == current {
-            return Ok(());
+            return Ok(tokens);
         }
 
         if indent > current {
             self.indentation.push(indent);
-            self.tokens
-                .push(Token::new(TokenKind::Indent, start, self.position))
+            tokens.push(Token::new(TokenKind::Indent, start, self.position))
         } else {
             while let Some(&top) = self.indentation.last() {
                 if indent >= top {
@@ -379,8 +277,7 @@ impl<'a> Lexer<'a> {
                 }
 
                 self.indentation.pop();
-                self.tokens
-                    .push(Token::new(TokenKind::Dedent, start, self.position))
+                tokens.push(Token::new(TokenKind::Dedent, start, self.position))
             }
 
             let last = *self.indentation.last().unwrap();
@@ -401,10 +298,12 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(())
+        Ok(tokens)
     }
 
-    pub fn tokenize(&mut self) -> Result<(), Diagnostic> {
+    pub fn tokenize(&mut self) -> Result<Vec<Token>, Diagnostic> {
+        let mut tokens: Vec<Token> = Vec::new();
+
         loop {
             let token = match self.next_token()? {
                 None => continue,
@@ -413,30 +312,26 @@ impl<'a> Lexer<'a> {
 
             let kind = token.kind.clone();
 
-            self.tokens.push(token);
+            tokens.push(token);
 
             match kind {
                 TokenKind::EOF => {
-                    let eof = self.tokens.pop().unwrap();
+                    let eof = tokens.pop().unwrap();
 
                     while let Some(v) = self.indentation.pop() {
                         if v == 0 {
                             continue;
                         }
 
-                        self.tokens.push(Token::new(
-                            TokenKind::Dedent,
-                            self.position,
-                            self.position,
-                        ));
+                        tokens.push(Token::new(TokenKind::Dedent, self.position, self.position));
                     }
 
-                    self.tokens.push(eof);
+                    tokens.push(eof);
 
-                    return Ok(());
+                    return Ok(tokens);
                 }
 
-                TokenKind::Newline => self.track_indent()?,
+                TokenKind::Newline => tokens.extend(self.track_indent()?),
 
                 _ => continue,
             }
