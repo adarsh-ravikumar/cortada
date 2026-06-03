@@ -3,7 +3,7 @@ use core::fmt;
 use crate::common::Span;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum TokenType {
+pub enum TokenKind {
     Newline,
     Indent,
     Dedent,
@@ -42,28 +42,28 @@ pub enum TokenType {
     EOF,
 }
 
-impl TokenType {
-    pub fn keyword(lexeme: &str) -> TokenType {
+impl TokenKind {
+    pub fn keyword(lexeme: &str) -> TokenKind {
         match lexeme {
-            "if" => TokenType::KwrdIf,
-            "elif" => TokenType::KwrdElif,
-            "else" => TokenType::KwrdElse,
-            "for" => TokenType::KwrdFor,
-            "while" => TokenType::KwrdWhile,
-            "fn" => TokenType::KwrdFn,
-            _ => TokenType::Identifier,
+            "if" => TokenKind::KwrdIf,
+            "elif" => TokenKind::KwrdElif,
+            "else" => TokenKind::KwrdElse,
+            "for" => TokenKind::KwrdFor,
+            "while" => TokenKind::KwrdWhile,
+            "fn" => TokenKind::KwrdFn,
+            _ => TokenKind::Identifier,
         }
     }
 }
 
 #[derive(PartialEq, Eq)]
 pub struct Token {
-    pub kind: TokenType,
+    pub kind: TokenKind,
     pub span: Span,
 }
 
 impl Token {
-    pub fn new(kind: TokenType, start_pos: usize, end_pos: usize) -> Self {
+    pub fn new(kind: TokenKind, start_pos: usize, end_pos: usize) -> Self {
         Self {
             kind,
             span: Span::new(start_pos, end_pos),

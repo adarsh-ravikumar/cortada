@@ -18,12 +18,5 @@ fn main() {
         Err(e) => return println!("{}", Logger::generate_log(&file, e)),
     };
 
-    println!(
-        "[{}]",
-        lex.tokens
-            .iter()
-            .map(|t| t.to_string())
-            .collect::<Vec<String>>()
-            .join(", ")
-    );
+    println!("{lex}");
 }
