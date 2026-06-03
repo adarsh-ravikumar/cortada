@@ -12,8 +12,8 @@
 - [x] Bindings
 - [x] Scopes
 - [x] Typing System
-- [X] Values
-- [ ] Expressions and Order of Evaluation
+- [x] Values
+- [x] Expressions and Order of Evaluation
 - [ ] Mutability Semantics
 
 ---
