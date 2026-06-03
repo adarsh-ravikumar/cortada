@@ -56,7 +56,7 @@ impl<'a> Lexer<'a> {
 
         loop {
             match self.peek(0) {
-                b'0'..b'9' => {
+                b'0'..=b'9' => {
                     self.advance();
                 }
 
