@@ -2,9 +2,11 @@ use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticKind},
     lexer::{Token, TokenKind},
-    parser::node::{
-        AstNode, AstNodeKind, BinaryExpr, BinaryOp, FloatExpr, IdentifierExpr, IntegerExpr,
-        UnaryExpr, UnaryOp,
+    parser::{
+        BinaryOp, UnaryOp,
+        node::{
+            AstNode, AstNodeKind, BinaryExpr, FloatExpr, IdentifierExpr, IntegerExpr, UnaryExpr,
+        },
     },
     utils::IOFile,
 };
