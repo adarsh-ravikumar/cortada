@@ -1,8 +1,10 @@
 statements -> (statement NEWLINE+)*
 
-statement  -> expression
+statement  -> boolean_expression
 
-expression -> term ((PLUS | HYPHEN) term)*
+boolean_expression -> arithmetic_expression ((LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | DOUBLE_EQUAL) arithmetic_expression)*
+
+arithmetic_expression -> term ((PLUS | HYPHEN) term)*
 
 term       -> factor ((STAR | FWD_SLASH) factor)*
             | factor
@@ -13,5 +15,5 @@ factor     -> (PLUS | MINUS) factor
 atom       -> INTEGER
             | FLOAT
             | IDENTIFIER
-            | LPAREN expression RPAREN
+            | LPAREN boolean_expression RPAREN
 
