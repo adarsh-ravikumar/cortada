@@ -38,20 +38,25 @@ pub enum TokenKind {
     KwrdFor,
     KwrdWhile,
     KwrdFn,
-
+    KwrdNot,
+    KwrdAnd,
+    KwrdOr,
     EOF,
 }
 
 impl TokenKind {
     pub fn keyword(lexeme: &str) -> TokenKind {
         match lexeme {
-            "if" => TokenKind::KwrdIf,
-            "elif" => TokenKind::KwrdElif,
-            "else" => TokenKind::KwrdElse,
-            "for" => TokenKind::KwrdFor,
-            "while" => TokenKind::KwrdWhile,
-            "fn" => TokenKind::KwrdFn,
-            _ => TokenKind::Identifier,
+            "if" => Self::KwrdIf,
+            "elif" => Self::KwrdElif,
+            "else" => Self::KwrdElse,
+            "for" => Self::KwrdFor,
+            "while" => Self::KwrdWhile,
+            "fn" => Self::KwrdFn,
+            "not" => Self::KwrdNot,
+            "and" => Self::KwrdAnd,
+            "or" => Self::KwrdOr,
+            _ => Self::Identifier,
         }
     }
 }
