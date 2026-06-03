@@ -1,6 +1,12 @@
-statements -> (statement NEWLINE+)*
+statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  -> expression 
+statement  -> expression | if_stmt
+
+if_stmt    -> KWRD_IF expression suite
+              (KWRD_ELIF expression suite)*
+              (KWRD_ELSE suite)?
+
+suite -> COLON INDENT statements DEDENT
 
 expression -> or_expression
 
