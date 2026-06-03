@@ -25,6 +25,10 @@ pub struct UnaryExpr {
     pub rhs: Box<AstNode>,
 }
 
+pub struct StmtsExpr {
+    pub stmts: Vec<Box<AstNode>>,
+}
+
 // Node Kinds
 pub enum AstNodeKind {
     Integer(IntegerExpr),
@@ -32,6 +36,7 @@ pub enum AstNodeKind {
     Identifier(IdentifierExpr),
     Binary(BinaryExpr),
     Unary(UnaryExpr),
+    Statements(StmtsExpr),
 }
 
 // Node

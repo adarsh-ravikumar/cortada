@@ -1,3 +1,5 @@
+use std::env::join_paths;
+
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticKind},
@@ -5,7 +7,8 @@ use crate::{
     parser::{
         BinaryOp, UnaryOp,
         node::{
-            AstNode, AstNodeKind, BinaryExpr, FloatExpr, IdentifierExpr, IntegerExpr, UnaryExpr,
+            AstNode, AstNodeKind, BinaryExpr, FloatExpr, IdentifierExpr, IntegerExpr, StmtsExpr,
+            UnaryExpr,
         },
     },
     utils::IOFile,
@@ -95,6 +98,40 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
+    fn parse_statements(&mut self) -> ParserRes {
+        self.skip_newlines();
+
+        let mut stmts: Vec<Box<AstNode>> = Vec::new();
+
+        let start = self.peek(0).span.start;
+
+        loop {
+            self.skip_newlines();
+
+            if let Some(_) = self.matches(TokenKind::EOF) {
+                return Ok(Box::new(AstNode::new(
+                    AstNodeKind::Statements(StmtsExpr { stmts }),
+                    start,
+                    self.peek(0).span.end,
+                )));
+            }
+
+            stmts.push(self.parse_statement()?);
+
+            if self.matches(TokenKind::Newline).is_none() {
+                return Err(Diagnostic::new(
+                    DiagnosticKind::Error,
+                    format!("Expected newline, got {:?}", self.peek(0).kind),
+                    Span::new(start, self.peek(0).span.end),
+                ));
+            }
+        }
+    }
+
+    fn parse_statement(&mut self) -> ParserRes {
+        self.parse_expression()
+    }
+
     fn parse_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_term,
@@ -134,8 +171,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_atom(&mut self) -> ParserRes {
-        self.skip_newlines();
-
         let next_tok = self.peek(0);
 
         let start = next_tok.span.start;
@@ -193,7 +228,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> ParserRes {
         self.skip_newlines();
 
-        let res = self.parse_expression()?;
+        let res = self.parse_statements()?;
 
         self.skip_newlines();
 
