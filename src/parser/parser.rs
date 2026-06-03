@@ -1,5 +1,3 @@
-use std::env::join_paths;
-
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticKind},
@@ -7,8 +5,8 @@ use crate::{
     parser::{
         BinaryOp, UnaryOp,
         node::{
-            AstNode, AstNodeKind, BinaryExpr, FloatExpr, IdentifierExpr, IntegerExpr, StmtsExpr,
-            UnaryExpr,
+            AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, IdentifierExpr, IfStatement,
+            IntegerExpr, Statements, UnaryExpr,
         },
     },
     utils::IOFile,
@@ -71,6 +69,24 @@ impl<'a> Parser<'a> {
         if cur.kind == kind { Some(cur) } else { None }
     }
 
+    fn expect(&self, kind: TokenKind) -> Result<(), Diagnostic> {
+        let cur = self.peek(0);
+        if cur.kind == kind {
+            return Ok(());
+        }
+
+        Err(Diagnostic::new(
+            DiagnosticKind::Error,
+            format!(
+                "[{}] Expected '{:?}', got {:?}",
+                self.position,
+                kind,
+                self.peek(0).kind
+            ),
+            cur.span,
+        ))
+    }
+
     fn parse_binary_expr(
         &mut self,
         lhs_fn: fn(&mut Self) -> ParserRes,
@@ -106,11 +122,9 @@ impl<'a> Parser<'a> {
         let start = self.peek(0).span.start;
 
         loop {
-            self.skip_newlines();
-
-            if let Some(_) = self.matches(TokenKind::EOF) {
+            if let Some(_) = self.matches_any(&[TokenKind::EOF, TokenKind::Dedent]) {
                 return Ok(Box::new(AstNode::new(
-                    AstNodeKind::Statements(StmtsExpr { stmts }),
+                    AstNodeKind::Statements(Statements { stmts }),
                     start,
                     self.peek(0).span.end,
                 )));
@@ -118,18 +132,135 @@ impl<'a> Parser<'a> {
 
             stmts.push(self.parse_statement()?);
 
-            if self.matches(TokenKind::Newline).is_none() {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!("Expected newline, got {:?}", self.peek(0).kind),
-                    Span::new(start, self.peek(0).span.end),
-                ));
-            }
+            self.skip_newlines();
         }
     }
 
     fn parse_statement(&mut self) -> ParserRes {
-        self.parse_expression()
+        self.skip_newlines();
+
+        match self.peek(0).kind {
+            TokenKind::KwrdIf => self.parse_if_statement(),
+            _ => self.parse_expression(),
+        }
+    }
+
+    fn parse_if_statement(&mut self) -> ParserRes {
+        let mut elif_stmts: Vec<ElifBranch> = Vec::new();
+
+        let cur = self.peek(0);
+
+        let start = cur.span.start;
+
+        self.expect(TokenKind::KwrdIf)?;
+
+        self.advance();
+
+        let condition = self.parse_expression()?;
+
+        let body = self.parse_body()?;
+
+        self.skip_newlines();
+
+        while let Some(_) = self.matches(TokenKind::KwrdElif) {
+            self.advance();
+
+            let condition = self.parse_expression()?;
+
+            let body = self.parse_body()?;
+
+            self.skip_newlines();
+
+            elif_stmts.push(ElifBranch { condition, body });
+        }
+
+        if let Some(tok) = self.matches(TokenKind::KwrdElse) {
+            let start = tok.span.start;
+
+            self.advance();
+
+            let else_stmt = self.parse_body()?;
+
+            let end = else_stmt.span.end;
+
+            self.skip_newlines();
+
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::If(IfStatement {
+                    condition,
+                    body,
+                    elif_stmts,
+                    else_stmt: Some(else_stmt),
+                }),
+                start,
+                end,
+            )));
+        }
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::If(IfStatement {
+                condition,
+                body,
+                elif_stmts,
+                else_stmt: None,
+            }),
+            start,
+            self.peek(0).span.end,
+        )))
+    }
+
+    fn parse_body(&mut self) -> ParserRes {
+        let mut stmts: Vec<Box<AstNode>> = Vec::new();
+
+        let mut start = self.peek(0).span.start;
+
+        self.expect(TokenKind::Colon)?;
+
+        self.advance();
+
+        self.skip_newlines();
+
+        if self.peek(0).kind != TokenKind::Indent {
+            return Err(Diagnostic::new(
+                DiagnosticKind::Error,
+                format!(
+                    "[{}] Expected Indentation, got {:?}",
+                    self.position,
+                    self.peek(0).kind
+                ),
+                Span::new(start, self.peek(0).span.end),
+            ));
+        }
+
+        self.advance();
+
+        self.skip_newlines();
+
+        start = self.peek(0).span.start;
+
+        loop {
+            if let Some(_) = self.matches(TokenKind::Dedent) {
+                self.advance();
+
+                return Ok(Box::new(AstNode::new(
+                    AstNodeKind::Statements(Statements { stmts }),
+                    start,
+                    self.peek(0).span.end,
+                )));
+            }
+
+            stmts.push(self.parse_statement()?);
+
+            self.skip_newlines();
+
+            if let Some(tok) = self.matches(TokenKind::Indent) {
+                return Err(Diagnostic::new(
+                    DiagnosticKind::Error,
+                    format!("[{}] Unexpected Indent", self.position),
+                    tok.span,
+                ));
+            }
+        }
     }
 
     fn parse_expression(&mut self) -> ParserRes {
@@ -183,6 +314,8 @@ impl<'a> Parser<'a> {
                 TokenKind::LesserEqual,
                 TokenKind::RightAngle,
                 TokenKind::GreaterEqual,
+                TokenKind::DoubleEqual,
+                TokenKind::NotEqual,
             ],
         )
     }
@@ -256,7 +389,11 @@ impl<'a> Parser<'a> {
                 if self.matches(TokenKind::RightParen).is_none() {
                     return Err(Diagnostic::new(
                         DiagnosticKind::Error,
-                        format!("Expected ')', got {:?}", self.peek(0).kind),
+                        format!(
+                            "[{}] Expected ')', got {:?}",
+                            self.position,
+                            self.peek(0).kind
+                        ),
                         Span::new(start, self.peek(0).span.end),
                     ));
                 }
@@ -269,7 +406,10 @@ impl<'a> Parser<'a> {
             kind => {
                 return Err(Diagnostic::new(
                     DiagnosticKind::Error,
-                    format!("Expected int, float or identifier, got {:?}", kind),
+                    format!(
+                        "[{}] Expected int, float or identifier, got {:?}",
+                        self.position, kind
+                    ),
                     Span::new(start, self.peek(0).span.end),
                 ));
             }
@@ -292,7 +432,7 @@ impl<'a> Parser<'a> {
         if cur.kind != TokenKind::EOF {
             return Err(Diagnostic::new(
                 DiagnosticKind::Error,
-                format!("Expected EOF, Got {:?}", cur.kind),
+                format!("[{}] Expected EOF, Got {:?}", self.position, cur.kind),
                 Span::new(self.position, self.position),
             ));
         }

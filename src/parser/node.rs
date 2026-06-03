@@ -25,8 +25,20 @@ pub struct UnaryExpr {
     pub rhs: Box<AstNode>,
 }
 
-pub struct StmtsExpr {
+pub struct Statements {
     pub stmts: Vec<Box<AstNode>>,
+}
+
+pub struct IfStatement {
+    pub condition: Box<AstNode>,
+    pub body: Box<AstNode>,
+    pub elif_stmts: Vec<ElifBranch>,
+    pub else_stmt: Option<Box<AstNode>>,
+}
+
+pub struct ElifBranch {
+    pub condition: Box<AstNode>,
+    pub body: Box<AstNode>,
 }
 
 // Node Kinds
@@ -36,7 +48,9 @@ pub enum AstNodeKind {
     Identifier(IdentifierExpr),
     Binary(BinaryExpr),
     Unary(UnaryExpr),
-    Statements(StmtsExpr),
+
+    If(IfStatement),
+    Statements(Statements),
 }
 
 // Node

@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::TokenKind;
 
 pub enum BinaryOp {
     Add,
@@ -12,6 +12,8 @@ pub enum BinaryOp {
     GreaterThan,
     LessThanEqual,
     GreaterThanEqual,
+    IsEqual,
+    NotEqual,
     And,
     Or,
 }
@@ -28,6 +30,8 @@ impl From<TokenKind> for BinaryOp {
             TokenKind::LesserEqual => Self::LessThanEqual,
             TokenKind::RightAngle => Self::GreaterThan,
             TokenKind::GreaterEqual => Self::GreaterThanEqual,
+            TokenKind::DoubleEqual => Self::IsEqual,
+            TokenKind::NotEqual => Self::NotEqual,
             TokenKind::KwrdAnd => Self::And,
             TokenKind::KwrdOr => Self::Or,
             _ => panic!("Invalid Binary Operator!"),
@@ -47,6 +51,8 @@ impl fmt::Display for BinaryOp {
             Self::GreaterThan => write!(f, ">"),
             Self::LessThanEqual => write!(f, "<="),
             Self::GreaterThanEqual => write!(f, ">="),
+            Self::IsEqual => write!(f, "=="),
+            Self::NotEqual => write!(f, "!="),
             Self::And => write!(f, "and"),
             Self::Or => write!(f, "or"),
         }
