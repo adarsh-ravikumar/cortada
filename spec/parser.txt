@@ -3,9 +3,11 @@ expression -> term ((PLUS | HYPHEN) term)*
 term       -> factor ((STAR | FWD_SLASH) factor)*
             | factor
 
-factor     -> INTEGER
+factor     -> (PLUS | MINUS) factor
+            | atom
+
+atom       -> INTEGER
             | FLOAT
             | IDENTIFIER
             | LPAREN expression RPAREN
-
 
