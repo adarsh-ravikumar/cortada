@@ -47,7 +47,7 @@ impl AstPrinter {
             ),
 
             AstNodeKind::Identifier(expr) => println!(
-                "{leader}{}Float{}({}{}{})",
+                "{leader}{}Identifier{}({}{}{})",
                 Style::CYAN,
                 Style::RESET,
                 Style::BRIGHT_YELLOW,
@@ -115,6 +115,19 @@ impl AstPrinter {
                 };
 
                 Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
+            }
+
+            AstNodeKind::Statements(expr) => {
+                println!(
+                    "{leader}{}{}Statements{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+                for stmt in expr.stmts.iter() {
+                    Self::print_helper(&stmt, file, level + 1, is_terminal);
+                }
             }
         }
     }
