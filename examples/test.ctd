@@ -1,1 +1,27 @@
----1 * --2 + -(3 + 4)
+if not (a + b > c * d) and x < y:
+  1 + 2
+
+  if foo > bar:
+    3 + 4
+  elif baz < qux:
+    5 + 6
+
+    if nested:
+      7 + 8
+    else:
+      9 + 10
+
+  else:
+    11 + 12
+
+elif a > b:
+  13 + 14
+
+elif c < d and not e > f:
+  15 + 16
+
+else:
+  if last_chance:
+    17 + 18
+  else:
+    19 + 20
