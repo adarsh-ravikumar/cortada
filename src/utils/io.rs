@@ -1,6 +1,7 @@
-use core::fmt;
 use std::fs;
 use std::path::PathBuf;
+
+use crate::common::Span;
 
 pub struct IOFile {
     pub path: PathBuf,
@@ -71,5 +72,9 @@ impl IOFile {
 
     pub fn view(&self, start: usize, end: usize) -> &str {
         std::str::from_utf8(&self.src[start..end]).unwrap()
+    }
+
+    pub fn view_span(&self, span: Span) -> &str {
+        self.view(span.start, span.end)
     }
 }
