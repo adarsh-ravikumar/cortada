@@ -1,8 +1,18 @@
 statements -> (statement NEWLINE+)*
 
-statement  -> boolean_expression
+statement  -> expression 
+
+expression -> or_expression
+
+or_expression -> and_expression (KWRD_OR and_expression)*
+
+and_expression -> not_expression (KWRD_AND not_expression)*
+
+not_expression -> (KWRD_NOT) not_expression
+                | boolean_expression
 
 boolean_expression -> arithmetic_expression ((LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | DOUBLE_EQUAL) arithmetic_expression)*
+
 
 arithmetic_expression -> term ((PLUS | HYPHEN) term)*
 
@@ -15,5 +25,5 @@ factor     -> (PLUS | MINUS) factor
 atom       -> INTEGER
             | FLOAT
             | IDENTIFIER
-            | LPAREN boolean_expression RPAREN
+            | LPAREN or_expression RPAREN
 
