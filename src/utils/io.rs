@@ -42,32 +42,40 @@ impl IOFile {
         starts
     }
 
-    pub fn search_line_index(&self, idx: usize) -> Option<usize> {
+    pub fn line_from_index(&self, idx: usize) -> Option<usize> {
         let line = self.line_starts.partition_point(|&start| start <= idx);
 
         line.checked_sub(1)
     }
 
-    pub fn get_line(&self, line: usize) -> Result<&str, std::str::Utf8Error> {
-        let line_start = self.line_starts[line];
+    pub fn line(&self, line: usize) -> &str {
+        let line_start = self.line_starts[line - 1];
 
         let line_end = if line == self.line_starts.len() - 1 {
             self.src.len()
         } else {
-            self.line_starts[line + 1] - 1
+            self.line_starts[line] - 1
         };
 
         std::str::from_utf8(&self.src[line_start..line_end])
+            .expect("UTF-8 error when attempting to read source")
     }
 
-    pub fn get_lines(&self, start: usize, end: usize) -> Result<Vec<&str>, std::str::Utf8Error> {
-        let mut lines: Vec<&str> = Vec::new();
+    pub fn line_col_from_index(&self, index: usize) -> (usize, usize) {
+        let line = self
+            .line_from_index(index)
+            .or_else(|| panic!("line index out of bounds!"))
+            .unwrap();
 
-        for line in start..=end {
-            lines.push(self.get_line(line)?)
-        }
+        let line_start = self.line_starts[line];
 
-        Ok(lines)
+        let col = index - line_start;
+
+        (line + 1, col + 1)
+    }
+
+    pub fn index_from_line_col(&self, line: usize, col: usize) -> usize {
+        self.line_starts[line] + col
     }
 
     pub fn view(&self, start: usize, end: usize) -> &str {
