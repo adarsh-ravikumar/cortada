@@ -235,13 +235,16 @@ impl<'a> Parser<'a> {
 
         while self.peek(0).kind == TokenKind::Comma {
             self.advance();
+
             if self.peek(0).kind == TokenKind::RightParen {
-                self.advance();
                 break;
             }
 
             params.push(self.parse_param()?);
         }
+
+        self.expect(TokenKind::RightParen)?;
+        self.advance();
 
         let body = self.parse_suite()?;
 
