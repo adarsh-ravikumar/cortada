@@ -160,9 +160,15 @@ impl AstPrinter {
                 Self::print_helper(&stmt.body, file, level + 1, is_terminal);
 
                 // elif
+                let tree_ch = if stmt.else_stmt.is_some() {
+                    "├──"
+                } else {
+                    "└──"
+                };
+
                 if !stmt.elif_stmts.is_empty() {
                     println!(
-                        "{}{}├── {}{}Elif{}{}",
+                        "{}{}{tree_ch} {}{}Elif{}{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::BOLD,
@@ -197,7 +203,7 @@ impl AstPrinter {
                 // else
                 if stmt.else_stmt.is_some() {
                     println!(
-                        "{}{}├── {}{}Else{}{}",
+                        "{}{}└── {}{}Else{}{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::BOLD,
@@ -247,7 +253,7 @@ impl AstPrinter {
                 // else
                 if stmt.else_stmt.is_some() {
                     println!(
-                        "{}{}├── {}{}Else{}{}",
+                        "{}{}└── {}{}Else{}{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::BOLD,
@@ -263,6 +269,96 @@ impl AstPrinter {
                         is_terminal,
                     );
                 }
+            }
+
+            AstNodeKind::VarDecl(stmt) => {
+                println!(
+                    "{leader}{}{}VarDecl{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                println!(
+                    "{}{}├── {}Name: {}{}{}",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN,
+                    Style::BRIGHT_YELLOW,
+                    file.view_span(stmt.name.span),
+                    Style::RESET
+                );
+
+                if let Some(var_type) = &stmt.var_type {
+                    println!(
+                        "{}{}├── {}Type: {}{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::CYAN,
+                        Style::BRIGHT_YELLOW,
+                        file.view_span(var_type.span),
+                        Style::RESET
+                    );
+                }
+
+                print!(
+                    "{}{}└── {}Value",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN
+                );
+
+                if let Some(v) = &stmt.value {
+                    let is_terminal = match v.kind {
+                        AstNodeKind::Integer(_)
+                        | AstNodeKind::Float(_)
+                        | AstNodeKind::Identifier(_) => true,
+                        _ => false,
+                    };
+
+                    print!("{}\n", Style::RESET);
+                    Self::print_helper(&v, file, level + 2, is_terminal);
+                } else {
+                    println!(": {}null{}", Style::BRIGHT_YELLOW, Style::RESET);
+                }
+            }
+
+            AstNodeKind::VarAssign(stmt) => {
+                println!(
+                    "{leader}{}{}VarAssign{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                println!(
+                    "{}{}├── {}Name: {}{}{}",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN,
+                    Style::BRIGHT_YELLOW,
+                    file.view_span(stmt.name.span),
+                    Style::RESET
+                );
+
+                println!(
+                    "{}{}└── {}Value {}",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN,
+                    Style::RESET
+                );
+
+                let is_terminal = match stmt.value.kind {
+                    AstNodeKind::Integer(_)
+                    | AstNodeKind::Float(_)
+                    | AstNodeKind::Identifier(_) => true,
+                    _ => false,
+                };
+
+                Self::print_helper(&stmt.value, file, level + 2, is_terminal);
             }
         }
     }
