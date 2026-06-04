@@ -57,25 +57,19 @@ impl AstPrinter {
 
             AstNodeKind::Binary(expr) => {
                 println!(
-                    "{leader}{}{}Binary{}{}",
+                    "{leader}{}{}Binary{}({}{}{}{}{}){}",
                     Style::BOLD,
                     Style::BLUE,
                     Style::RESET,
-                    Style::RESET_BOLD
-                );
-
-                Self::print_helper(&expr.lhs, file, level + 1, false);
-
-                println!(
-                    "{}{}├── {}op{}({}{}{})",
-                    Style::BRIGHT_BLACK,
-                    Self::generate_leader(level + 1),
-                    Style::MAGENTA,
-                    Style::RESET,
+                    Style::RESET_BOLD,
                     Style::BRIGHT_CYAN,
                     expr.op,
                     Style::RESET,
+                    Style::BOLD,
+                    Style::RESET_BOLD,
                 );
+
+                Self::print_helper(&expr.lhs, file, level + 1, false);
 
                 let is_terminal = match expr.rhs.kind {
                     AstNodeKind::Integer(_)
@@ -89,32 +83,26 @@ impl AstPrinter {
 
             AstNodeKind::Unary(expr) => {
                 println!(
-                    "{leader}{}{}Unary{}{}",
+                    "{leader}{}{}Unary{}({}{}{}{}{}){}",
                     Style::BOLD,
-                    Style::GREEN,
+                    Style::BLUE,
                     Style::RESET,
-                    Style::RESET_BOLD
-                );
-
-                println!(
-                    "{}{}├── {}op{}({}{}{})",
-                    Style::BRIGHT_BLACK,
-                    Self::generate_leader(level + 1),
-                    Style::MAGENTA,
-                    Style::RESET,
+                    Style::RESET_BOLD,
                     Style::BRIGHT_CYAN,
                     expr.op,
                     Style::RESET,
+                    Style::BOLD,
+                    Style::RESET_BOLD,
                 );
 
-                let is_terminal = match expr.rhs.kind {
+                let is_terminal = match expr.operand.kind {
                     AstNodeKind::Integer(_)
                     | AstNodeKind::Float(_)
                     | AstNodeKind::Identifier(_) => true,
                     _ => false,
                 };
 
-                Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
+                Self::print_helper(&expr.operand, file, level + 1, is_terminal);
             }
 
             AstNodeKind::Statements(stmts) => {
