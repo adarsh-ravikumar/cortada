@@ -11,6 +11,7 @@ pub enum TokenKind {
     Integer,
     Float,
     Colon,
+    Comma,
     LeftParen,
     RightParen,
     LeftBracket,

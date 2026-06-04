@@ -148,6 +148,7 @@ impl<'a> Lexer<'a> {
 
         let tok_type = match ch {
             b':' => TokenKind::Colon,
+            b',' => TokenKind::Comma,
             b'(' => TokenKind::LeftParen,
             b')' => TokenKind::RightParen,
             b'[' => TokenKind::LeftBracket,
