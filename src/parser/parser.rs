@@ -5,9 +5,9 @@ use crate::{
     parser::{
         BinaryOp, UnaryOp,
         node::{
-            AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, IdentifierExpr, IfStatement,
-            IntegerExpr, Statements, UnaryExpr, VarAssignStatement, VarDeclStatement,
-            WhileStatement,
+            AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, FnStatement, IdentifierExpr,
+            IfStatement, IntegerExpr, Param, Statements, UnaryExpr, VarAssignStatement,
+            VarDeclStatement, WhileStatement,
         },
     },
     utils::IOFile,
@@ -141,8 +141,9 @@ impl<'a> Parser<'a> {
         self.skip_newlines();
 
         match self.peek(0).kind {
-            TokenKind::KwrdIf => self.parse_if_statement(),
+            TokenKind::KwrdFn => self.parse_fn_statement(),
             TokenKind::KwrdWhile => self.parse_while_statement(),
+            TokenKind::KwrdIf => self.parse_if_statement(),
             TokenKind::Identifier => self.parse_var_decl_or_assign(),
             _ => self.parse_expression(),
         }
@@ -213,6 +214,77 @@ impl<'a> Parser<'a> {
             start,
             self.peek(0).span.start,
         )))
+    }
+
+    fn parse_fn_statement(&mut self) -> ParserRes {
+        self.expect(TokenKind::KwrdFn)?;
+        self.advance();
+
+        self.expect(TokenKind::Identifier)?;
+        let ident_tok = self.advance();
+        let name = IdentifierExpr {
+            span: ident_tok.span,
+        };
+
+        self.expect(TokenKind::LeftParen)?;
+        self.advance();
+
+        self.skip_newlines();
+
+        let mut params: Vec<Param> = vec![self.parse_param()?];
+
+        while self.peek(0).kind == TokenKind::Comma {
+            self.advance();
+            if self.peek(0).kind == TokenKind::RightParen {
+                self.advance();
+                break;
+            }
+
+            params.push(self.parse_param()?);
+        }
+
+        let body = self.parse_suite()?;
+
+        let start = name.span.start;
+        let end = body.span.end;
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::Fn(FnStatement { name, params, body }),
+            start,
+            end,
+        )))
+    }
+
+    fn parse_param(&mut self) -> Result<Param, Diagnostic> {
+        self.expect(TokenKind::Identifier)?;
+        let ident_tok = self.advance();
+        let name = IdentifierExpr {
+            span: ident_tok.span,
+        };
+
+        let mut param_type: Option<IdentifierExpr> = None;
+
+        let mut default_value: Option<Box<AstNode>> = None;
+
+        if let Some(_) = self.matches(TokenKind::Colon) {
+            self.advance();
+
+            self.expect(TokenKind::Identifier)?;
+            param_type = Some(IdentifierExpr {
+                span: self.advance().span,
+            });
+        }
+
+        if let Some(_) = self.matches(TokenKind::Equal) {
+            self.advance();
+            default_value = Some(self.parse_expression()?);
+        }
+
+        Ok(Param {
+            name,
+            param_type,
+            default_value,
+        })
     }
 
     fn parse_while_statement(&mut self) -> ParserRes {

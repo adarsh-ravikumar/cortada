@@ -1,37 +1,18 @@
-x := 5
-y : float = 3.14
-z : String
+fn compute(
+    x: int,
+    y,
+    scale = 3.14
+):
+  result := x + y * 2
 
-if x > 0 and not (y < 0):
-  z = x
-
-  while x < 10:
-    x = x + 1
-
-    if x > 7:
-      y = y + 1.0
-    elif x < 3:
-      y = y - 1.0
-    else:
-      y = 0.0
-
+  if result > 10:
+    scale = scale + 1.0
+  elif result < 0:
+    scale = 0.0
   else:
-    z = y
+    scale = scale - 1.0
 
-elif x < 0:
-  x = -x
+  while result > 0:
+    result = result - 1
 
-  while x > 0:
-    x = x - 1
-
-else:
-  x = 0
-  y = 0.0
-
-result := x + 2 * (3 + 4)
-
-while result > 10:
-  result = result - 1
-
-else:
-  result = 0
+outer := 42

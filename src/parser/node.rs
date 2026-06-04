@@ -16,6 +16,18 @@ pub struct VarAssignStatement {
     pub value: Box<AstNode>,
 }
 
+pub struct FnStatement {
+    pub name: IdentifierExpr,
+    pub params: Vec<Param>,
+    pub body: Box<AstNode>,
+}
+
+pub struct Param {
+    pub name: IdentifierExpr,
+    pub param_type: Option<IdentifierExpr>,
+    pub default_value: Option<Box<AstNode>>,
+}
+
 pub struct WhileStatement {
     pub condition: Box<AstNode>,
     pub body: Box<AstNode>,
@@ -63,6 +75,8 @@ pub enum AstNodeKind {
 
     VarDecl(VarDeclStatement),
     VarAssign(VarAssignStatement),
+
+    Fn(FnStatement),
 
     While(WhileStatement),
     If(IfStatement),
