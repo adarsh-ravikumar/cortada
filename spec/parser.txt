@@ -1,9 +1,12 @@
 statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  -> expression | if_stmt
+statement  -> expression | if_stmt | while_stmt
 
 if_stmt    -> KWRD_IF expression suite
               (KWRD_ELIF expression suite)*
+              (KWRD_ELSE suite)?
+
+while_stmt -> KWRD_WHILE expression suite
               (KWRD_ELSE suite)?
 
 suite -> COLON INDENT statements DEDENT
