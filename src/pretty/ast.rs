@@ -368,6 +368,18 @@ impl AstPrinter {
                     Style::RESET
                 );
 
+                if let Some(t) = &stmt.return_type {
+                    println!(
+                        "{}{}├── {}Return Type: {}{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::CYAN,
+                        Style::BRIGHT_YELLOW,
+                        file.view_span(t.span),
+                        Style::RESET
+                    );
+                }
+
                 if !stmt.params.is_empty() {
                     println!(
                         "{}{}├── {}Params{}",
@@ -429,7 +441,7 @@ impl AstPrinter {
                     Style::RESET
                 );
 
-                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+                Self::print_helper(&stmt.body, file, level + 2, is_terminal);
             }
 
             AstNodeKind::Call(stmt) => {
