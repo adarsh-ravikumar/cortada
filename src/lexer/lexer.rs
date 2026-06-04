@@ -1,15 +1,31 @@
 use crate::{
     common::Span,
-    diagnostic::{Diagnostic, DiagnosticKind},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::{Token, TokenKind},
     utils::IOFile,
 };
+
+struct Delimiter {
+    ch: u8,
+    start: usize,
+}
+
+impl Delimiter {
+    fn pair(ch: u8) -> u8 {
+        match ch {
+            b'(' => b')',
+            b'[' => b']',
+            b'{' => b'}',
+            _ => unreachable!(),
+        }
+    }
+}
 
 pub struct Lexer<'a> {
     src: &'a IOFile,
     position: usize,
     indentation: Vec<usize>,
-    delimiter: Vec<u8>,
+    delimiter: Vec<Delimiter>,
 }
 
 impl<'a> Lexer<'a> {
@@ -103,15 +119,26 @@ impl<'a> Lexer<'a> {
     fn handle_comment(&mut self, start: usize) -> Result<(), Diagnostic> {
         // multi-line
         if self.peek(0) == b'~' && self.peek(1) == b'~' {
+            let start: Span = Span::new(start, self.position + 1);
+
             self.advance_by(2);
 
             loop {
                 if self.is_at_end() {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        "Unterminated multi-line comment".to_string(),
-                        Span::new(start, self.position),
-                    ));
+                    return Err(Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnmatchedDelimiter,
+                        msg: "unclosed multi-line comment".into(),
+                        primary: Label {
+                            span: Span::new(self.position - 1, self.position - 1),
+                            msg: "expected closing '~~~' before end of file".into(),
+                        },
+                        secondary: vec![Label {
+                            span: start,
+                            msg: "comment started here".into(),
+                        }],
+                        notes: vec!["multi-line comments must be terminated with '~~~'".into()],
+                    });
                 }
 
                 if self.peek(0) == b'~' && self.peek(1) == b'~' && self.peek(2) == b'~' {
@@ -153,57 +180,63 @@ impl<'a> Lexer<'a> {
             b',' => TokenKind::Comma,
 
             b'(' => {
-                self.delimiter.push(ch);
+                self.delimiter.push(Delimiter { ch, start });
                 TokenKind::LeftParen
             }
 
             b')' => {
                 let pair = self.delimiter.pop();
 
-                if pair.is_none() || pair.unwrap() != b'(' {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        format!("Unmatched ')'"),
-                        Span::new(start, self.position),
-                    ));
+                if pair.is_none() {
+                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                }
+
+                let pair = pair.unwrap();
+
+                if pair.ch != b'(' {
+                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
                 }
 
                 TokenKind::RightParen
             }
 
             b'[' => {
-                self.delimiter.push(ch);
+                self.delimiter.push(Delimiter { ch, start });
                 TokenKind::LeftBracket
             }
 
             b']' => {
                 let pair = self.delimiter.pop();
 
-                if pair.is_none() || pair.unwrap() != b'[' {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        format!("Unmatched ']'"),
-                        Span::new(start, self.position),
-                    ));
+                if pair.is_none() {
+                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                }
+
+                let pair = pair.unwrap();
+
+                if pair.ch != b'[' {
+                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
                 }
 
                 TokenKind::RightBracket
             }
 
             b'{' => {
-                self.delimiter.push(ch);
+                self.delimiter.push(Delimiter { ch, start });
                 TokenKind::LeftBrace
             }
 
             b'}' => {
                 let pair = self.delimiter.pop();
 
-                if pair.is_none() || pair.unwrap() != b'{' {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        format!("Unmatched '}}'"),
-                        Span::new(start, self.position),
-                    ));
+                if pair.is_none() {
+                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                }
+
+                let pair = pair.unwrap();
+
+                if pair.ch != b'{' {
+                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
                 }
 
                 TokenKind::RightBrace
@@ -216,8 +249,11 @@ impl<'a> Lexer<'a> {
                     TokenKind::Star
                 }
             }
+
             b'/' => TokenKind::FwdSlash,
+
             b'+' => TokenKind::Plus,
+
             b'-' => {
                 if self.match_char(b'>') {
                     TokenKind::ThinArrow
@@ -225,6 +261,7 @@ impl<'a> Lexer<'a> {
                     TokenKind::Hyphen
                 }
             }
+
             b'.' => {
                 if self.match_char(b'.') {
                     TokenKind::DoubleDot
@@ -232,6 +269,7 @@ impl<'a> Lexer<'a> {
                     TokenKind::Dot
                 }
             }
+
             b'<' => {
                 if self.match_char(b'=') {
                     TokenKind::LesserEqual
@@ -239,6 +277,7 @@ impl<'a> Lexer<'a> {
                     TokenKind::LeftAngle
                 }
             }
+
             b'>' => {
                 if self.match_char(b'=') {
                     TokenKind::GreaterEqual
@@ -246,6 +285,7 @@ impl<'a> Lexer<'a> {
                     TokenKind::RightAngle
                 }
             }
+
             b'=' => {
                 if self.match_char(b'=') {
                     TokenKind::DoubleEqual
@@ -260,11 +300,17 @@ impl<'a> Lexer<'a> {
                 if self.match_char(b'=') {
                     TokenKind::NotEqual
                 } else {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        "Unkown symbol '!'".to_string(),
-                        Span::new(start, self.position),
-                    ));
+                    return Err(Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnexpectedChar,
+                        msg: "unexpected character '!'".into(),
+                        primary: Label {
+                            span: Span::new(start, start),
+                            msg: "'!' is not a valid token".into(),
+                        },
+                        secondary: vec![],
+                        notes: vec!["if you meant not-equal, use '!='".into()],
+                    });
                 }
             }
 
@@ -280,11 +326,17 @@ impl<'a> Lexer<'a> {
             }
 
             ch => {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!("Unknown symbol '{}'", char::from(ch)),
-                    Span::new(start, self.position),
-                ));
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UnexpectedChar,
+                    msg: format!("unexpected character '{}'", char::from(ch)),
+                    primary: Label {
+                        span: Span::new(start, start),
+                        msg: format!("'{}' is not a valid token", char::from(ch)),
+                    },
+                    secondary: vec![],
+                    notes: vec![],
+                });
             }
         };
 
@@ -298,31 +350,31 @@ impl<'a> Lexer<'a> {
 
         let mut indent: usize = 0;
 
-        let starting_char = self.peek(0);
+        let starting_indent = self.peek(0);
 
-        if starting_char != b' '
-            && starting_char != b'\t'
-            && starting_char != b'\n'
+        if starting_indent != b' '
+            && starting_indent != b'\t'
+            && starting_indent != b'\n'
             && self.indentation.is_empty()
         {
             return Ok(tokens);
         }
 
-        let char_to_diagnostics = |ch: u8| if ch == b' ' { "<space>" } else { "<tab>" };
-
         loop {
             match self.peek(0) {
                 ch if ch == b' ' || ch == b'\t' => {
-                    if ch != starting_char {
-                        return Err(Diagnostic::new(
-                            DiagnosticKind::Error,
-                            format!(
-                                "Indentation cannot be mixed. Expected {}, got {}",
-                                char_to_diagnostics(starting_char),
-                                char_to_diagnostics(ch)
-                            ),
-                            Span::new(start, self.position),
-                        ));
+                    if ch != starting_indent {
+                        return Err(Diagnostic {
+                            severity: DiagnosticSeverity::Error,
+                            class: DiagnosticClass::InvalidLayout,
+                            msg: format!("inconsistent use of tabs and spaces in indentation"),
+                            primary: Label {
+                                span: Span::new(start, self.position),
+                                msg: format!("indentation contains both tabs and spaces"),
+                            },
+                            secondary: vec![],
+                            notes: vec!["use only tabs or only spaces for indentation".into()],
+                        });
                     }
 
                     indent += if ch == b' ' { 1 } else { 4 };
@@ -357,18 +409,28 @@ impl<'a> Lexer<'a> {
             let last = *self.indentation.last().unwrap();
 
             if indent != last {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!(
-                        "Invalid indentation level. Expected one of {}, got {indent}",
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::InvalidLayout,
+
+                    msg: "invalid indentation level".into(),
+
+                    primary: Label {
+                        span: Span::new(start, self.position),
+                        msg: format!("indentation level is {indent}"),
+                    },
+
+                    secondary: vec![],
+
+                    notes: vec![format!(
+                        "expected one of: {}",
                         self.indentation
                             .iter()
                             .map(|i| i.to_string())
-                            .collect::<Vec<String>>()
+                            .collect::<Vec<_>>()
                             .join(", ")
-                    ),
-                    Span::new(start, self.position),
-                ));
+                    )],
+                });
             }
         }
 
@@ -410,6 +472,42 @@ impl<'a> Lexer<'a> {
 
                 _ => tokens.push(token),
             }
+        }
+    }
+
+    // Errors
+    fn unmatched_delimiter(got: Delimiter) -> Diagnostic {
+        Diagnostic {
+            severity: DiagnosticSeverity::Error,
+            class: DiagnosticClass::UnmatchedDelimiter,
+            msg: "Closing delimiter without matching opening delimiter".into(),
+            primary: Label {
+                span: Span::new(got.start, got.start),
+                msg: format!("Found '{}'", char::from(got.ch)),
+            },
+            secondary: vec![],
+            notes: vec![],
+        }
+    }
+
+    fn mismatched_delimiter(expected: Delimiter, got: Delimiter) -> Diagnostic {
+        Diagnostic {
+            severity: DiagnosticSeverity::Error,
+            class: DiagnosticClass::UnmatchedDelimiter,
+            msg: format!(
+                "mismatched delimiter: expected '{}', found '{}'",
+                char::from(Delimiter::pair(expected.ch)),
+                char::from(got.ch)
+            ),
+            primary: Label {
+                span: Span::new(got.start, got.start),
+                msg: format!("expected '{}'", char::from(Delimiter::pair(expected.ch))),
+            },
+            secondary: vec![Label {
+                span: Span::new(expected.start, expected.start),
+                msg: format!("'{}' opened here", char::from(expected.ch)),
+            }],
+            notes: vec![],
         }
     }
 }
