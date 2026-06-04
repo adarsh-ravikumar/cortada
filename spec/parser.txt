@@ -1,6 +1,8 @@
 statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  -> var_decl | var_assign | fn_stmt | while_stmt | if_stmt | expression
+statement  -> var_decl | var_assign | fn_stmt | while_stmt | if_stmt
+            | return_stmt | break_stmt | continue_stmt
+            | expression
 
 var_decl   -> IDENTIFIER COLON 
               (
@@ -26,6 +28,12 @@ if_stmt    -> KWRD_IF expression suite
               (KWRD_ELSE suite)?
 
 suite -> COLON NEWLINE? INDENT statements DEDENT
+
+return_stmt -> KWRD_RETURN expression?
+
+break_stmt -> KWRD_BREAK
+
+continue_stmt -> KWRD_CONTINUE
 
 expression -> or_expression
 
