@@ -1,18 +1,16 @@
-fn compute(
-    x: int,
-    y,
-    scale = 3.14
-):
-  result := x + y * 2
+fn compute(x: int, y, scale = 3.14,):
+  result := add(x, multiply(y, scale))
 
-  if result > 10:
-    scale = scale + 1.0
-  elif result < 0:
-    scale = 0.0
-  else:
-    scale = scale - 1.0
+  if is_valid(result) and not is_zero(result):
+    print(result)
 
-  while result > 0:
-    result = result - 1
+  while countdown(result) > 0:
+    result = decrement(result)
 
-outer := 42
+value := compute(add(1, 2), multiply(3, 4),)
+
+output := wrap(transform(compute(1, 2, 3.14)))
+
+check(compute(1, 2), add(multiply(3, 4), divide(10, 2),),)
+
+foo()()()

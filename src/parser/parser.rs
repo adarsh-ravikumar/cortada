@@ -5,9 +5,9 @@ use crate::{
     parser::{
         BinaryOp, UnaryOp,
         node::{
-            AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, FnStatement, IdentifierExpr,
-            IfStatement, IntegerExpr, Param, Statements, UnaryExpr, VarAssignStatement,
-            VarDeclStatement, WhileStatement,
+            AstNode, AstNodeKind, BinaryExpr, CallExpr, ElifBranch, FloatExpr, FnStatement,
+            IdentifierExpr, IfStatement, IntegerExpr, Param, Statements, UnaryExpr,
+            VarAssignStatement, VarDeclStatement, WhileStatement,
         },
     },
     utils::IOFile,
@@ -144,30 +144,30 @@ impl<'a> Parser<'a> {
             TokenKind::KwrdFn => self.parse_fn_statement(),
             TokenKind::KwrdWhile => self.parse_while_statement(),
             TokenKind::KwrdIf => self.parse_if_statement(),
-            TokenKind::Identifier => self.parse_var_decl_or_assign(),
+            TokenKind::Identifier => self.parse_ident_leading_statement(),
             _ => self.parse_expression(),
         }
     }
 
-    fn parse_var_decl_or_assign(&mut self) -> ParserRes {
+    fn parse_ident_leading_statement(&mut self) -> ParserRes {
         self.expect(TokenKind::Identifier)?;
-        let ident_tok = self.advance();
-        let ident = IdentifierExpr {
-            span: ident_tok.span,
-        };
 
-        match self.peek(0).kind {
-            TokenKind::Colon => self.parse_var_decl(ident),
-            TokenKind::Equal => self.parse_var_assign(ident),
-            _ => Ok(Box::new(AstNode::new(
-                AstNodeKind::Identifier(ident),
-                ident_tok.span.start,
-                ident_tok.span.end,
-            ))),
+        let next_tok = self.peek(1);
+
+        match next_tok.kind {
+            TokenKind::Colon => self.parse_var_decl(),
+            TokenKind::Equal => self.parse_var_assign(),
+            _ => self.parse_expression(),
         }
     }
 
-    fn parse_var_decl(&mut self, name: IdentifierExpr) -> ParserRes {
+    fn parse_var_decl(&mut self) -> ParserRes {
+        self.expect(TokenKind::Identifier)?;
+        let ident_tok = self.advance();
+        let name = IdentifierExpr {
+            span: ident_tok.span,
+        };
+
         self.expect(TokenKind::Colon)?;
         self.advance();
 
@@ -198,19 +198,22 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_var_assign(&mut self, ident: IdentifierExpr) -> ParserRes {
+    fn parse_var_assign(&mut self) -> ParserRes {
+        self.expect(TokenKind::Identifier)?;
+        let ident_tok = self.advance();
+        let name = IdentifierExpr {
+            span: ident_tok.span,
+        };
+
         self.expect(TokenKind::Equal)?;
         self.advance();
 
-        let expr = self.parse_expression()?;
+        let value = self.parse_expression()?;
 
-        let start = ident.span.start;
+        let start = name.span.start;
 
         Ok(Box::new(AstNode::new(
-            AstNodeKind::VarAssign(VarAssignStatement {
-                name: ident,
-                value: expr,
-            }),
+            AstNodeKind::VarAssign(VarAssignStatement { name, value }),
             start,
             self.peek(0).span.start,
         )))
@@ -484,12 +487,12 @@ impl<'a> Parser<'a> {
 
             self.advance();
 
-            let rhs = self.parse_not_expression()?;
+            let operand = self.parse_not_expression()?;
 
-            let end = rhs.span.end;
+            let end = operand.span.end;
 
             return Ok(Box::new(AstNode::new(
-                AstNodeKind::Unary(UnaryExpr { op, rhs }),
+                AstNodeKind::Unary(UnaryExpr { op, operand }),
                 start,
                 end,
             )));
@@ -537,18 +540,72 @@ impl<'a> Parser<'a> {
 
             self.advance();
 
-            let rhs = self.parse_factor()?;
+            let operand = self.parse_factor()?;
 
-            let end = rhs.span.end;
+            let end = operand.span.end;
 
             return Ok(Box::new(AstNode::new(
-                AstNodeKind::Unary(UnaryExpr { op, rhs }),
+                AstNodeKind::Unary(UnaryExpr { op, operand }),
                 start,
                 end,
             )));
         }
 
-        self.parse_atom()
+        self.parse_postfix()
+    }
+
+    fn parse_postfix(&mut self) -> ParserRes {
+        let mut operand = self.parse_atom()?;
+
+        loop {
+            println!("[{}] {:?}", self.position, self.peek(0).kind);
+            match self.peek(0).kind {
+                TokenKind::LeftParen => operand = self.parse_call_expr(operand)?,
+                _ => break,
+            }
+        }
+
+        Ok(operand)
+    }
+
+    fn parse_call_expr(&mut self, callee: Box<AstNode>) -> ParserRes {
+        self.expect(TokenKind::LeftParen)?;
+        self.advance();
+
+        let start = callee.span.start;
+
+        let mut args: Vec<Box<AstNode>> = Vec::new();
+
+        if self.peek(0).kind == TokenKind::RightParen {
+            let t = self.advance();
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::Call(CallExpr { callee, args }),
+                start,
+                t.span.end,
+            )));
+        }
+
+        args.push(self.parse_expression()?);
+
+        while self.peek(0).kind == TokenKind::Comma {
+            self.advance();
+
+            if self.peek(0).kind == TokenKind::RightParen {
+                break;
+            }
+
+            args.push(self.parse_expression()?);
+        }
+
+        self.expect(TokenKind::RightParen)?;
+
+        let end = self.advance().span.end;
+
+        return Ok(Box::new(AstNode::new(
+            AstNodeKind::Call(CallExpr { callee, args }),
+            start,
+            end,
+        )));
     }
 
     fn parse_atom(&mut self) -> ParserRes {

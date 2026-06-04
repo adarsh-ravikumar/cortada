@@ -54,7 +54,12 @@ pub struct BinaryExpr {
 
 pub struct UnaryExpr {
     pub op: UnaryOp,
-    pub rhs: Box<AstNode>,
+    pub operand: Box<AstNode>,
+}
+
+pub struct CallExpr {
+    pub callee: Box<AstNode>,
+    pub args: Vec<Box<AstNode>>,
 }
 
 pub struct IntegerExpr {
@@ -83,6 +88,7 @@ pub enum AstNodeKind {
 
     Binary(BinaryExpr),
     Unary(UnaryExpr),
+    Call(CallExpr),
 
     Integer(IntegerExpr),
     Float(FloatExpr),
