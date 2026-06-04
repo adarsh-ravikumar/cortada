@@ -6,7 +6,8 @@ use crate::{
         BinaryOp, UnaryOp,
         node::{
             AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, IdentifierExpr, IfStatement,
-            IntegerExpr, Statements, UnaryExpr, WhileStatement,
+            IntegerExpr, Statements, UnaryExpr, VarAssignStatement, VarDeclStatement,
+            WhileStatement,
         },
     },
     utils::IOFile,
@@ -142,8 +143,76 @@ impl<'a> Parser<'a> {
         match self.peek(0).kind {
             TokenKind::KwrdIf => self.parse_if_statement(),
             TokenKind::KwrdWhile => self.parse_while_statement(),
+            TokenKind::Identifier => self.parse_var_decl_or_assign(),
             _ => self.parse_expression(),
         }
+    }
+
+    fn parse_var_decl_or_assign(&mut self) -> ParserRes {
+        self.expect(TokenKind::Identifier)?;
+        let ident_tok = self.advance();
+        let ident = IdentifierExpr {
+            span: ident_tok.span,
+        };
+
+        match self.peek(0).kind {
+            TokenKind::Colon => self.parse_var_decl(ident),
+            TokenKind::Equal => self.parse_var_assign(ident),
+            _ => Ok(Box::new(AstNode::new(
+                AstNodeKind::Identifier(ident),
+                ident_tok.span.start,
+                ident_tok.span.end,
+            ))),
+        }
+    }
+
+    fn parse_var_decl(&mut self, name: IdentifierExpr) -> ParserRes {
+        self.expect(TokenKind::Colon)?;
+        self.advance();
+
+        let mut var_type: Option<IdentifierExpr> = None;
+
+        let mut value: Option<Box<AstNode>> = None;
+
+        if self.peek(0).kind == TokenKind::Identifier {
+            let tok = self.advance();
+            var_type = Some(IdentifierExpr { span: tok.span });
+        }
+
+        if let Some(_) = self.matches(TokenKind::Equal) {
+            self.advance();
+            value = Some(self.parse_expression()?);
+        }
+
+        let start = name.span.start;
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::VarDecl(VarDeclStatement {
+                name,
+                var_type,
+                value,
+            }),
+            start,
+            self.peek(0).span.start,
+        )))
+    }
+
+    fn parse_var_assign(&mut self, ident: IdentifierExpr) -> ParserRes {
+        self.expect(TokenKind::Equal)?;
+        self.advance();
+
+        let expr = self.parse_expression()?;
+
+        let start = ident.span.start;
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::VarAssign(VarAssignStatement {
+                name: ident,
+                value: expr,
+            }),
+            start,
+            self.peek(0).span.start,
+        )))
     }
 
     fn parse_if_statement(&mut self) -> ParserRes {

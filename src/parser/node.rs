@@ -47,6 +47,17 @@ pub struct WhileStatement {
     pub else_stmt: Option<Box<AstNode>>,
 }
 
+pub struct VarDeclStatement {
+    pub name: IdentifierExpr,
+    pub var_type: Option<IdentifierExpr>,
+    pub value: Option<Box<AstNode>>,
+}
+
+pub struct VarAssignStatement {
+    pub name: IdentifierExpr,
+    pub value: Box<AstNode>,
+}
+
 // Node Kinds
 pub enum AstNodeKind {
     Integer(IntegerExpr),
@@ -55,8 +66,11 @@ pub enum AstNodeKind {
     Binary(BinaryExpr),
     Unary(UnaryExpr),
 
+    // Statements
     If(IfStatement),
     While(WhileStatement),
+    VarDecl(VarDeclStatement),
+    VarAssign(VarAssignStatement),
     Statements(Statements),
 }
 
