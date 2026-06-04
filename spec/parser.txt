@@ -1,13 +1,6 @@
 statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  ->  if_stmt | while_stmt | var_decl_or_assign | expression
-
-if_stmt    -> KWRD_IF expression suite
-              (KWRD_ELIF expression suite)*
-              (KWRD_ELSE suite)?
-
-while_stmt -> KWRD_WHILE expression suite
-              (KWRD_ELSE suite)?
+statement  ->  var_decl_or_assign | while_stmt | if_stmt | expression
 
 var_decl_or_assign -> IDENTIFIER (var_decl | var_assign)?
 
@@ -18,6 +11,13 @@ var_decl   -> COLON
               )
 
 var_assign -> EQUAL expression
+
+while_stmt -> KWRD_WHILE expression suite
+              (KWRD_ELSE suite)?
+
+if_stmt    -> KWRD_IF expression suite
+              (KWRD_ELIF expression suite)*
+              (KWRD_ELSE suite)?
 
 suite -> COLON NEWLINE? INDENT statements DEDENT
 
