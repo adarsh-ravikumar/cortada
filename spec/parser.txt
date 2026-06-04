@@ -12,8 +12,9 @@ var_decl   -> IDENTIFIER COLON
 
 var_assign -> IDENTIFIER EQUAL expression
 
-fn_stmt    -> KWRD_FN IDENTIFIER 
+fn_stmt    -> KWRD_FN IDENTIFIER
               LPAREN (param (COMMA param)*)? COMMA? RPAREN
+              (THIN_ARROW IDENTIFIER)?
               suite
 
 param -> IDENTIFIER 
