@@ -235,22 +235,37 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::LeftParen)?;
         self.advance();
 
-        self.skip_newlines();
+        let mut params: Vec<Param> = Vec::new();
 
-        let mut params: Vec<Param> = vec![self.parse_param()?];
-
-        while self.peek(0).kind == TokenKind::Comma {
-            self.advance();
-
-            if self.peek(0).kind == TokenKind::RightParen {
-                break;
-            }
-
+        if self.peek(0).kind != TokenKind::RightParen {
             params.push(self.parse_param()?);
+
+            while self.peek(0).kind == TokenKind::Comma {
+                self.advance();
+
+                if self.peek(0).kind == TokenKind::RightParen {
+                    break;
+                }
+
+                params.push(self.parse_param()?);
+            }
         }
 
         self.expect(TokenKind::RightParen)?;
         self.advance();
+
+        let mut return_type: Option<IdentifierExpr> = None;
+
+        if self.peek(0).kind == TokenKind::ThinArrow {
+            self.advance();
+
+            self.expect(TokenKind::Identifier)?;
+            let ident_tok = self.advance();
+
+            return_type = Some(IdentifierExpr {
+                span: ident_tok.span,
+            });
+        }
 
         let body = self.parse_suite()?;
 
@@ -258,7 +273,12 @@ impl<'a> Parser<'a> {
         let end = body.span.end;
 
         Ok(Box::new(AstNode::new(
-            AstNodeKind::Fn(FnStatement { name, params, body }),
+            AstNodeKind::Fn(FnStatement {
+                name,
+                return_type,
+                params,
+                body,
+            }),
             start,
             end,
         )))

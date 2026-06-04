@@ -1,21 +1,5 @@
 fn compute(x: int, y, scale = 3.14,):
-  result := add(x, multiply(y, scale))
+  return 1
 
-  if is_valid(result) and not is_zero(result):
-    print(result)
-    continue
-
-  while countdown(result) > 0:
-    result = decrement(result)
-    break
-    continue
-  
-  return 12 * 4 + add(1, 2)
-
-value := compute(add(1, 2), multiply(3, 4),)
-
-output := wrap(transform(compute(1, 2, 3.14)))
-
-check(compute(1, 2), add(multiply(3, 4), divide(10, 2),),)
-
-foo()()()
+fn foo () -> int:
+  return 1

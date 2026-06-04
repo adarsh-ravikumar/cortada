@@ -18,6 +18,7 @@ pub struct VarAssignStatement {
 
 pub struct FnStatement {
     pub name: IdentifierExpr,
+    pub return_type: Option<IdentifierExpr>,
     pub params: Vec<Param>,
     pub body: Box<AstNode>,
 }
