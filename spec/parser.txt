@@ -1,6 +1,6 @@
 statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  ->  var_decl_or_assign | while_stmt | if_stmt | expression
+statement  ->  var_decl_or_assign | fn_stmt | while_stmt | if_stmt | expression
 
 var_decl_or_assign -> IDENTIFIER (var_decl | var_assign)?
 
@@ -11,6 +11,14 @@ var_decl   -> COLON
               )
 
 var_assign -> EQUAL expression
+
+fn_stmt    -> KWRD_FN IDENTIFIER 
+              LPAREN (param (COMMA param)*)? COMMA? RPAREN
+              suite
+
+param -> IDENTIFIER 
+         (COLON IDENTIFIER)?
+         (EQUAL expression)?
 
 while_stmt -> KWRD_WHILE expression suite
               (KWRD_ELSE suite)?
