@@ -214,6 +214,56 @@ impl AstPrinter {
                     );
                 }
             }
+
+            AstNodeKind::While(stmt) => {
+                println!(
+                    "{leader}{}{}While{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                // condition
+                println!(
+                    "{}{}├── {}condition",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::MAGENTA,
+                );
+
+                let is_terminal = match stmt.condition.kind {
+                    AstNodeKind::Integer(_)
+                    | AstNodeKind::Float(_)
+                    | AstNodeKind::Identifier(_) => true,
+                    _ => false,
+                };
+
+                Self::print_helper(&stmt.condition, file, level + 2, is_terminal);
+
+                // body
+                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+
+                // else
+                if stmt.else_stmt.is_some() {
+                    println!(
+                        "{}{}├── {}{}Else{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::BOLD,
+                        Style::MAGENTA,
+                        Style::RESET,
+                        Style::RESET_BOLD
+                    );
+
+                    Self::print_helper(
+                        stmt.else_stmt.as_ref().unwrap(),
+                        file,
+                        level + 2,
+                        is_terminal,
+                    );
+                }
+            }
         }
     }
 
