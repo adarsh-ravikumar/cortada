@@ -1,50 +1,47 @@
-use core::fmt;
+use crate::common::Span;
 
-use crate::{common::Span, utils::Style};
-
-pub struct Diagnostic {
-    pub kind: DiagnosticKind,
-    pub msg: String,
-    pub span: Span,
-}
-
-#[derive(Debug)]
-pub enum DiagnosticKind {
+pub enum DiagnosticSeverity {
     Warn,
     Error,
 }
 
-impl fmt::Display for DiagnosticKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+pub enum DiagnosticClass {
+    UnexpectedChar,
+    UnmatchedDelimiter,
+
+    ExpectedToken,
+    ExpectedExpression,
+    UnexpectedToken,
+    InvalidLayout,
+}
+
+impl DiagnosticClass {
+    pub fn code(&self) -> &'static str {
         match self {
-            Self::Warn => write!(
-                f,
-                "{}{}warn{}{}",
-                Style::BOLD,
-                Style::BRIGHT_YELLOW,
-                Style::RESET,
-                Style::RESET_BOLD
-            ),
-            Self::Error => write!(
-                f,
-                "{}{}Error{}{}",
-                Style::BOLD,
-                Style::BRIGHT_RED,
-                Style::RESET,
-                Style::RESET_BOLD
-            ),
+            Self::UnexpectedChar => "E001",
+            Self::UnmatchedDelimiter => "E002",
+
+            Self::ExpectedToken => "E003",
+            Self::ExpectedExpression => "E004",
+            Self::UnexpectedToken => "E005",
+            Self::InvalidLayout => "E006",
         }
     }
 }
 
-impl Diagnostic {
-    pub fn new(kind: DiagnosticKind, msg: String, span: Span) -> Self {
-        Self { kind, msg, span }
-    }
+pub struct Label {
+    pub span: Span,
+    pub msg: String,
 }
 
-impl fmt::Display for Diagnostic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.kind, self.msg)
-    }
+pub struct Diagnostic {
+    pub severity: DiagnosticSeverity,
+    pub class: DiagnosticClass,
+
+    pub msg: String,
+
+    pub primary: Label,
+    pub secondary: Vec<Label>,
+
+    pub notes: Vec<String>,
 }
