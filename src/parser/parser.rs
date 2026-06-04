@@ -215,6 +215,54 @@ impl<'a> Parser<'a> {
         )))
     }
 
+    fn parse_while_statement(&mut self) -> ParserRes {
+        let cur = self.peek(0);
+
+        let start = cur.span.start;
+
+        self.expect(TokenKind::KwrdWhile)?;
+
+        self.advance();
+
+        let condition = self.parse_expression()?;
+
+        let body = self.parse_suite()?;
+
+        self.skip_newlines();
+
+        if let Some(tok) = self.matches(TokenKind::KwrdElse) {
+            let start = tok.span.start;
+
+            self.advance();
+
+            let else_stmt = self.parse_suite()?;
+
+            let end = else_stmt.span.end;
+
+            self.skip_newlines();
+
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::While(WhileStatement {
+                    condition,
+                    body,
+                    else_stmt: Some(else_stmt),
+                }),
+                start,
+                end,
+            )));
+        }
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::While(WhileStatement {
+                condition,
+                body,
+                else_stmt: None,
+            }),
+            start,
+            self.peek(0).span.end,
+        )))
+    }
+
     fn parse_if_statement(&mut self) -> ParserRes {
         let mut elif_stmts: Vec<ElifBranch> = Vec::new();
 
@@ -228,7 +276,7 @@ impl<'a> Parser<'a> {
 
         let condition = self.parse_expression()?;
 
-        let body = self.parse_body()?;
+        let body = self.parse_suite()?;
 
         self.skip_newlines();
 
@@ -237,7 +285,7 @@ impl<'a> Parser<'a> {
 
             let condition = self.parse_expression()?;
 
-            let body = self.parse_body()?;
+            let body = self.parse_suite()?;
 
             self.skip_newlines();
 
@@ -249,7 +297,7 @@ impl<'a> Parser<'a> {
 
             self.advance();
 
-            let else_stmt = self.parse_body()?;
+            let else_stmt = self.parse_suite()?;
 
             let end = else_stmt.span.end;
 
@@ -279,55 +327,7 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_while_statement(&mut self) -> ParserRes {
-        let cur = self.peek(0);
-
-        let start = cur.span.start;
-
-        self.expect(TokenKind::KwrdWhile)?;
-
-        self.advance();
-
-        let condition = self.parse_expression()?;
-
-        let body = self.parse_body()?;
-
-        self.skip_newlines();
-
-        if let Some(tok) = self.matches(TokenKind::KwrdElse) {
-            let start = tok.span.start;
-
-            self.advance();
-
-            let else_stmt = self.parse_body()?;
-
-            let end = else_stmt.span.end;
-
-            self.skip_newlines();
-
-            return Ok(Box::new(AstNode::new(
-                AstNodeKind::While(WhileStatement {
-                    condition,
-                    body,
-                    else_stmt: Some(else_stmt),
-                }),
-                start,
-                end,
-            )));
-        }
-
-        Ok(Box::new(AstNode::new(
-            AstNodeKind::While(WhileStatement {
-                condition,
-                body,
-                else_stmt: None,
-            }),
-            start,
-            self.peek(0).span.end,
-        )))
-    }
-
-    fn parse_body(&mut self) -> ParserRes {
+    fn parse_suite(&mut self) -> ParserRes {
         let mut stmts: Vec<Box<AstNode>> = Vec::new();
 
         let mut start = self.peek(0).span.start;
