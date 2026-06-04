@@ -144,6 +144,9 @@ impl<'a> Parser<'a> {
             TokenKind::KwrdFn => self.parse_fn_statement(),
             TokenKind::KwrdWhile => self.parse_while_statement(),
             TokenKind::KwrdIf => self.parse_if_statement(),
+            TokenKind::KwrdReturn => self.parse_return_statement(),
+            TokenKind::KwrdBreak => self.parse_break_statement(),
+            TokenKind::KwrdContinue => self.parse_continue_statement(),
             TokenKind::Identifier => self.parse_ident_leading_statement(),
             _ => self.parse_expression(),
         }
@@ -459,6 +462,81 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_return_statement(&mut self) -> ParserRes {
+        self.expect(TokenKind::KwrdReturn)?;
+        let start = self.advance().span.start;
+
+        if self.peek(0).kind == TokenKind::Newline {
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::Return(None),
+                start,
+                self.peek(0).span.end,
+            )));
+        }
+
+        let expr = self.parse_expression()?;
+
+        let end = expr.span.end;
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::Return(Some(expr)),
+            start,
+            end,
+        )))
+    }
+
+    fn parse_break_statement(&mut self) -> ParserRes {
+        self.expect(TokenKind::KwrdBreak)?;
+        let tok = self.advance();
+
+        match self.peek(0).kind {
+            TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
+
+            t => {
+                return Err(Diagnostic::new(
+                    DiagnosticKind::Error,
+                    format!(
+                        "[{}] Expected terminator after continue, got {:?}",
+                        self.position, t
+                    ),
+                    self.peek(0).span,
+                ));
+            }
+        }
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::Break,
+            tok.span.start,
+            tok.span.end,
+        )))
+    }
+
+    fn parse_continue_statement(&mut self) -> ParserRes {
+        self.expect(TokenKind::KwrdContinue)?;
+        let tok = self.advance();
+
+        match self.peek(0).kind {
+            TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
+
+            t => {
+                return Err(Diagnostic::new(
+                    DiagnosticKind::Error,
+                    format!(
+                        "[{}] Expected terminator after continue, got {:?}",
+                        self.position, t
+                    ),
+                    self.peek(0).span,
+                ));
+            }
+        }
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::Continue,
+            tok.span.start,
+            tok.span.end,
+        )))
+    }
+
     fn parse_expression(&mut self) -> ParserRes {
         self.parse_or_expression()
     }
@@ -558,7 +636,6 @@ impl<'a> Parser<'a> {
         let mut operand = self.parse_atom()?;
 
         loop {
-            println!("[{}] {:?}", self.position, self.peek(0).kind);
             match self.peek(0).kind {
                 TokenKind::LeftParen => operand = self.parse_call_expr(operand)?,
                 _ => break,

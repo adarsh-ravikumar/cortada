@@ -3,9 +3,14 @@ fn compute(x: int, y, scale = 3.14,):
 
   if is_valid(result) and not is_zero(result):
     print(result)
+    continue
 
   while countdown(result) > 0:
     result = decrement(result)
+    break
+    continue
+  
+  return 12 * 4 + add(1, 2)
 
 value := compute(add(1, 2), multiply(3, 4),)
 

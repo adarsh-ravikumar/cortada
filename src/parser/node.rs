@@ -46,6 +46,8 @@ pub struct ElifBranch {
     pub body: Box<AstNode>,
 }
 
+type ReturnStatement = Option<Box<AstNode>>;
+
 pub struct BinaryExpr {
     pub lhs: Box<AstNode>,
     pub rhs: Box<AstNode>,
@@ -85,6 +87,10 @@ pub enum AstNodeKind {
 
     While(WhileStatement),
     If(IfStatement),
+
+    Return(ReturnStatement),
+    Break,
+    Continue,
 
     Binary(BinaryExpr),
     Unary(UnaryExpr),
