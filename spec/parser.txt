@@ -1,16 +1,14 @@
 statements -> NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement  ->  var_decl_or_assign | fn_stmt | while_stmt | if_stmt | expression
+statement  -> var_decl | var_assign | fn_stmt | while_stmt | if_stmt | expression
 
-var_decl_or_assign -> IDENTIFIER (var_decl | var_assign)?
-
-var_decl   -> COLON 
+var_decl   -> IDENTIFIER COLON 
               (
                   EQUAL expression
                 | IDENTIFIER (EQUAL expression)?
               )
 
-var_assign -> EQUAL expression
+var_assign -> IDENTIFIER EQUAL expression
 
 fn_stmt    -> KWRD_FN IDENTIFIER 
               LPAREN (param (COMMA param)*)? COMMA? RPAREN
@@ -47,7 +45,11 @@ term       -> factor ((STAR | FWD_SLASH) factor)*
             | factor
 
 factor     -> (PLUS | MINUS) factor
-            | atom
+            | postfix
+
+postfix    -> atom (call_suffix)*
+
+call_suffix  -> LPAREN (expression (COMMA expression)*)? COMMA? RPAREN
 
 atom       -> INTEGER
             | FLOAT
