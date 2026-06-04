@@ -41,6 +41,12 @@ pub struct ElifBranch {
     pub body: Box<AstNode>,
 }
 
+pub struct WhileStatement {
+    pub condition: Box<AstNode>,
+    pub body: Box<AstNode>,
+    pub else_stmt: Option<Box<AstNode>>,
+}
+
 // Node Kinds
 pub enum AstNodeKind {
     Integer(IntegerExpr),
@@ -50,6 +56,7 @@ pub enum AstNodeKind {
     Unary(UnaryExpr),
 
     If(IfStatement),
+    While(WhileStatement),
     Statements(Statements),
 }
 

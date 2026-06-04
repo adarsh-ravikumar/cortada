@@ -6,7 +6,7 @@ use crate::{
         BinaryOp, UnaryOp,
         node::{
             AstNode, AstNodeKind, BinaryExpr, ElifBranch, FloatExpr, IdentifierExpr, IfStatement,
-            IntegerExpr, Statements, UnaryExpr,
+            IntegerExpr, Statements, UnaryExpr, WhileStatement,
         },
     },
     utils::IOFile,
@@ -141,6 +141,7 @@ impl<'a> Parser<'a> {
 
         match self.peek(0).kind {
             TokenKind::KwrdIf => self.parse_if_statement(),
+            TokenKind::KwrdWhile => self.parse_while_statement(),
             _ => self.parse_expression(),
         }
     }
@@ -202,6 +203,54 @@ impl<'a> Parser<'a> {
                 condition,
                 body,
                 elif_stmts,
+                else_stmt: None,
+            }),
+            start,
+            self.peek(0).span.end,
+        )))
+    }
+
+    fn parse_while_statement(&mut self) -> ParserRes {
+        let cur = self.peek(0);
+
+        let start = cur.span.start;
+
+        self.expect(TokenKind::KwrdWhile)?;
+
+        self.advance();
+
+        let condition = self.parse_expression()?;
+
+        let body = self.parse_body()?;
+
+        self.skip_newlines();
+
+        if let Some(tok) = self.matches(TokenKind::KwrdElse) {
+            let start = tok.span.start;
+
+            self.advance();
+
+            let else_stmt = self.parse_body()?;
+
+            let end = else_stmt.span.end;
+
+            self.skip_newlines();
+
+            return Ok(Box::new(AstNode::new(
+                AstNodeKind::While(WhileStatement {
+                    condition,
+                    body,
+                    else_stmt: Some(else_stmt),
+                }),
+                start,
+                end,
+            )));
+        }
+
+        Ok(Box::new(AstNode::new(
+            AstNodeKind::While(WhileStatement {
+                condition,
+                body,
                 else_stmt: None,
             }),
             start,
