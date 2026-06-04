@@ -360,6 +360,89 @@ impl AstPrinter {
 
                 Self::print_helper(&stmt.value, file, level + 2, is_terminal);
             }
+
+            AstNodeKind::Fn(stmt) => {
+                println!(
+                    "{leader}{}{}Fn{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                println!(
+                    "{}{}├── {}Name: {}{}{}",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN,
+                    Style::BRIGHT_YELLOW,
+                    file.view_span(stmt.name.span),
+                    Style::RESET
+                );
+
+                if !stmt.params.is_empty() {
+                    println!(
+                        "{}{}├── {}Params{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::CYAN,
+                        Style::RESET
+                    );
+                }
+
+                for param in stmt.params.iter() {
+                    println!(
+                        "{}{}├── {}Name: {}{}{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 2),
+                        Style::CYAN,
+                        Style::BRIGHT_YELLOW,
+                        file.view_span(param.name.span),
+                        Style::RESET
+                    );
+
+                    if let Some(var_type) = &param.param_type {
+                        println!(
+                            "{}{}├── {}Type: {}{}{}",
+                            Style::BRIGHT_BLACK,
+                            Self::generate_leader(level + 3),
+                            Style::CYAN,
+                            Style::BRIGHT_YELLOW,
+                            file.view_span(var_type.span),
+                            Style::RESET
+                        );
+                    }
+
+                    if let Some(v) = &param.default_value {
+                        print!(
+                            "{}{}└── {}Default Value",
+                            Style::BRIGHT_BLACK,
+                            Self::generate_leader(level + 3),
+                            Style::CYAN
+                        );
+
+                        let is_terminal = match v.kind {
+                            AstNodeKind::Integer(_)
+                            | AstNodeKind::Float(_)
+                            | AstNodeKind::Identifier(_) => true,
+                            _ => false,
+                        };
+
+                        print!("{}\n", Style::RESET);
+                        Self::print_helper(&v, file, level + 4, is_terminal);
+                    }
+                }
+
+                println!(
+                    "{}{}├── {}Body{}",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::MAGENTA,
+                    Style::RESET
+                );
+
+                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+            }
         }
     }
 
