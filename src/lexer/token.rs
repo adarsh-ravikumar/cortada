@@ -43,6 +43,9 @@ pub enum TokenKind {
     KwrdNot,
     KwrdAnd,
     KwrdOr,
+    KwrdReturn,
+    KwrdBreak,
+    KwrdContinue,
     EOF,
 }
 
@@ -58,6 +61,9 @@ impl TokenKind {
             "not" => Self::KwrdNot,
             "and" => Self::KwrdAnd,
             "or" => Self::KwrdOr,
+            "return" => Self::KwrdReturn,
+            "break" => Self::KwrdBreak,
+            "continue" => Self::KwrdContinue,
             _ => Self::Identifier,
         }
     }
