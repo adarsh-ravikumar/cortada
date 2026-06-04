@@ -431,6 +431,56 @@ impl AstPrinter {
 
                 Self::print_helper(&stmt.body, file, level + 1, is_terminal);
             }
+
+            AstNodeKind::Call(stmt) => {
+                println!(
+                    "{leader}{}{}Call{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                println!(
+                    "{}{}├── {}Callee",
+                    Style::BRIGHT_BLACK,
+                    Self::generate_leader(level + 1),
+                    Style::CYAN,
+                );
+
+                Self::print_helper(&stmt.callee, file, level + 2, is_terminal);
+
+                if !stmt.args.is_empty() {
+                    println!(
+                        "{}{}├── {}Arguments{}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::CYAN,
+                        Style::RESET
+                    );
+                }
+
+                for (idx, arg) in stmt.args.iter().enumerate() {
+                    println!(
+                        "{}{}├── {}Argument {}({}){}",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 2),
+                        Style::CYAN,
+                        Style::BRIGHT_BLACK,
+                        idx,
+                        Style::RESET,
+                    );
+
+                    let is_terminal = match arg.kind {
+                        AstNodeKind::Integer(_)
+                        | AstNodeKind::Float(_)
+                        | AstNodeKind::Identifier(_) => true,
+                        _ => false,
+                    };
+
+                    Self::print_helper(&arg, file, level + 4, is_terminal);
+                }
+            }
         }
     }
 
