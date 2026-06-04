@@ -1,5 +1,18 @@
-fn compute(x: int, y, scale = 3.14,):
-  return 1
+fn compute(
+    x: int,
+    y,
+    scale = 3.14,
+):
+  result := x + y * 2
 
-fn foo () -> int:
-  return 1
+  if result > 10:
+    scale = scale + 1.0
+  elif result < 0:
+    scale = 0.0
+  else:
+    scale = scale - 1.0
+
+  while result > 0:
+    result = result - 1
+
+outer := 42

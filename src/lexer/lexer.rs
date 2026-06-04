@@ -9,6 +9,7 @@ pub struct Lexer<'a> {
     src: &'a IOFile,
     position: usize,
     indentation: Vec<usize>,
+    delimiter: Vec<u8>,
 }
 
 impl<'a> Lexer<'a> {
@@ -17,6 +18,7 @@ impl<'a> Lexer<'a> {
             src,
             position: 0,
             indentation: vec![0],
+            delimiter: Vec::new(),
         }
     }
 
@@ -149,12 +151,64 @@ impl<'a> Lexer<'a> {
         let tok_type = match ch {
             b':' => TokenKind::Colon,
             b',' => TokenKind::Comma,
-            b'(' => TokenKind::LeftParen,
-            b')' => TokenKind::RightParen,
-            b'[' => TokenKind::LeftBracket,
-            b']' => TokenKind::RightBracket,
-            b'{' => TokenKind::LeftBrace,
-            b'}' => TokenKind::RightBrace,
+
+            b'(' => {
+                self.delimiter.push(ch);
+                TokenKind::LeftParen
+            }
+
+            b')' => {
+                let pair = self.delimiter.pop();
+
+                if pair.is_none() || pair.unwrap() != b'(' {
+                    return Err(Diagnostic::new(
+                        DiagnosticKind::Error,
+                        format!("Unmatched ')'"),
+                        Span::new(start, self.position),
+                    ));
+                }
+
+                TokenKind::RightParen
+            }
+
+            b'[' => {
+                self.delimiter.push(ch);
+                TokenKind::LeftBracket
+            }
+
+            b']' => {
+                let pair = self.delimiter.pop();
+
+                if pair.is_none() || pair.unwrap() != b'[' {
+                    return Err(Diagnostic::new(
+                        DiagnosticKind::Error,
+                        format!("Unmatched ']'"),
+                        Span::new(start, self.position),
+                    ));
+                }
+
+                TokenKind::RightBracket
+            }
+
+            b'{' => {
+                self.delimiter.push(ch);
+                TokenKind::LeftBrace
+            }
+
+            b'}' => {
+                let pair = self.delimiter.pop();
+
+                if pair.is_none() || pair.unwrap() != b'{' {
+                    return Err(Diagnostic::new(
+                        DiagnosticKind::Error,
+                        format!("Unmatched '}}'"),
+                        Span::new(start, self.position),
+                    ));
+                }
+
+                TokenKind::RightBrace
+            }
+
             b'*' => {
                 if self.match_char(b'*') {
                     TokenKind::DoubleStar
@@ -330,14 +384,8 @@ impl<'a> Lexer<'a> {
                 Some(t) => t,
             };
 
-            let kind = token.kind.clone();
-
-            tokens.push(token);
-
-            match kind {
+            match &token.kind {
                 TokenKind::EOF => {
-                    let eof = tokens.pop().unwrap();
-
                     while let Some(v) = self.indentation.pop() {
                         if v == 0 {
                             continue;
@@ -346,14 +394,21 @@ impl<'a> Lexer<'a> {
                         tokens.push(Token::new(TokenKind::Dedent, self.position, self.position));
                     }
 
-                    tokens.push(eof);
+                    tokens.push(token);
 
                     return Ok(tokens);
                 }
 
-                TokenKind::Newline => tokens.extend(self.track_indent()?),
+                TokenKind::Newline => {
+                    if !self.delimiter.is_empty() {
+                        continue;
+                    }
 
-                _ => continue,
+                    tokens.push(token);
+                    tokens.extend(self.track_indent()?)
+                }
+
+                _ => tokens.push(token),
             }
         }
     }
