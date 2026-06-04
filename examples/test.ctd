@@ -1,27 +1,37 @@
-if not (a + b > c * d) and x < y:
-  1 + 2
+x := 5
+y : float = 3.14
+z : String
 
-  if foo > bar:
-    3 + 4
-  elif baz < qux:
-    5 + 6
+if x > 0 and not (y < 0):
+  z = x
 
-    if nested:
-      7 + 8
+  while x < 10:
+    x = x + 1
+
+    if x > 7:
+      y = y + 1.0
+    elif x < 3:
+      y = y - 1.0
     else:
-      9 + 10
+      y = 0.0
 
   else:
-    11 + 12
+    z = y
 
-elif a > b:
-  13 + 14
+elif x < 0:
+  x = -x
 
-elif c < d and not e > f:
-  15 + 16
+  while x > 0:
+    x = x - 1
 
 else:
-  if last_chance:
-    17 + 18
-  else:
-    19 + 20
+  x = 0
+  y = 0.0
+
+result := x + 2 * (3 + 4)
+
+while result > 10:
+  result = result - 1
+
+else:
+  result = 0
