@@ -10,13 +10,20 @@ impl AstPrinter {
         "│   ".repeat(level - 1)
     }
 
-    fn print_helper(ast: &Box<AstNode>, file: &IOFile, level: usize, is_terminal: bool) {
+    fn is_terminal(kind: &AstNodeKind) -> bool {
+        matches!(
+            kind,
+            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier
+        )
+    }
+
+    fn print_helper(ast: &Box<AstNode>, file: &IOFile, level: usize) {
         let leader = if level > 0 {
             format!(
                 "{}{}{} {}",
                 Style::BRIGHT_BLACK,
                 Self::generate_leader(level),
-                if is_terminal {
+                if Self::is_terminal(&ast.kind) {
                     "└──"
                 } else {
                     "├──"
@@ -46,12 +53,12 @@ impl AstPrinter {
                 Style::RESET
             ),
 
-            AstNodeKind::Identifier(expr) => println!(
+            AstNodeKind::Identifier => println!(
                 "{leader}{}Identifier{}({}{}{})",
                 Style::CYAN,
                 Style::RESET,
                 Style::BRIGHT_YELLOW,
-                file.view_span(expr.span),
+                file.view_span(ast.span),
                 Style::RESET
             ),
 
@@ -69,16 +76,9 @@ impl AstPrinter {
                     Style::RESET_BOLD,
                 );
 
-                Self::print_helper(&expr.lhs, file, level + 1, false);
+                Self::print_helper(&expr.lhs, file, level + 1);
 
-                let is_terminal = match expr.rhs.kind {
-                    AstNodeKind::Integer(_)
-                    | AstNodeKind::Float(_)
-                    | AstNodeKind::Identifier(_) => true,
-                    _ => false,
-                };
-
-                Self::print_helper(&expr.rhs, file, level + 1, is_terminal);
+                Self::print_helper(&expr.rhs, file, level + 1);
             }
 
             AstNodeKind::Unary(expr) => {
@@ -95,14 +95,7 @@ impl AstPrinter {
                     Style::RESET_BOLD,
                 );
 
-                let is_terminal = match expr.operand.kind {
-                    AstNodeKind::Integer(_)
-                    | AstNodeKind::Float(_)
-                    | AstNodeKind::Identifier(_) => true,
-                    _ => false,
-                };
-
-                Self::print_helper(&expr.operand, file, level + 1, is_terminal);
+                Self::print_helper(&expr.operand, file, level + 1);
             }
 
             AstNodeKind::Statements(stmts) => {
@@ -113,8 +106,9 @@ impl AstPrinter {
                     Style::RESET,
                     Style::RESET_BOLD
                 );
+
                 for stmt in stmts.stmts.iter() {
-                    Self::print_helper(&stmt, file, level + 1, is_terminal);
+                    Self::print_helper(&stmt, file, level + 1);
                 }
             }
 
@@ -135,17 +129,10 @@ impl AstPrinter {
                     Style::MAGENTA,
                 );
 
-                let is_terminal = match stmt.condition.kind {
-                    AstNodeKind::Integer(_)
-                    | AstNodeKind::Float(_)
-                    | AstNodeKind::Identifier(_) => true,
-                    _ => false,
-                };
-
-                Self::print_helper(&stmt.condition, file, level + 2, is_terminal);
+                Self::print_helper(&stmt.condition, file, level + 2);
 
                 // body
-                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+                Self::print_helper(&stmt.body, file, level + 1);
 
                 // elif
                 let tree_ch = if stmt.else_stmt.is_some() {
@@ -175,17 +162,10 @@ impl AstPrinter {
                         Style::MAGENTA,
                     );
 
-                    let is_terminal = match stmt.condition.kind {
-                        AstNodeKind::Integer(_)
-                        | AstNodeKind::Float(_)
-                        | AstNodeKind::Identifier(_) => true,
-                        _ => false,
-                    };
-
-                    Self::print_helper(&elif_stmt.condition, file, level + 3, is_terminal);
+                    Self::print_helper(&elif_stmt.condition, file, level + 3);
 
                     // body
-                    Self::print_helper(&elif_stmt.body, file, level + 2, is_terminal);
+                    Self::print_helper(&elif_stmt.body, file, level + 2);
                 }
 
                 // else
@@ -200,12 +180,7 @@ impl AstPrinter {
                         Style::RESET_BOLD
                     );
 
-                    Self::print_helper(
-                        stmt.else_stmt.as_ref().unwrap(),
-                        file,
-                        level + 2,
-                        is_terminal,
-                    );
+                    Self::print_helper(stmt.else_stmt.as_ref().unwrap(), file, level + 2);
                 }
             }
 
@@ -226,17 +201,10 @@ impl AstPrinter {
                     Style::MAGENTA,
                 );
 
-                let is_terminal = match stmt.condition.kind {
-                    AstNodeKind::Integer(_)
-                    | AstNodeKind::Float(_)
-                    | AstNodeKind::Identifier(_) => true,
-                    _ => false,
-                };
-
-                Self::print_helper(&stmt.condition, file, level + 2, is_terminal);
+                Self::print_helper(&stmt.condition, file, level + 2);
 
                 // body
-                Self::print_helper(&stmt.body, file, level + 1, is_terminal);
+                Self::print_helper(&stmt.body, file, level + 1);
 
                 // else
                 if stmt.else_stmt.is_some() {
@@ -250,12 +218,7 @@ impl AstPrinter {
                         Style::RESET_BOLD
                     );
 
-                    Self::print_helper(
-                        stmt.else_stmt.as_ref().unwrap(),
-                        file,
-                        level + 2,
-                        is_terminal,
-                    );
+                    Self::print_helper(stmt.else_stmt.as_ref().unwrap(), file, level + 2);
                 }
             }
 
@@ -274,7 +237,7 @@ impl AstPrinter {
                     Self::generate_leader(level + 1),
                     Style::CYAN,
                     Style::BRIGHT_YELLOW,
-                    file.view_span(stmt.name.span),
+                    file.view_span(stmt.name),
                     Style::RESET
                 );
 
@@ -285,28 +248,21 @@ impl AstPrinter {
                         Self::generate_leader(level + 1),
                         Style::CYAN,
                         Style::BRIGHT_YELLOW,
-                        file.view_span(var_type.span),
+                        file.view_span(*var_type),
                         Style::RESET
                     );
                 }
 
                 print!(
-                    "{}{}└── {}Value",
+                    "{}{}├── {}Value",
                     Style::BRIGHT_BLACK,
                     Self::generate_leader(level + 1),
                     Style::CYAN
                 );
 
                 if let Some(v) = &stmt.value {
-                    let is_terminal = match v.kind {
-                        AstNodeKind::Integer(_)
-                        | AstNodeKind::Float(_)
-                        | AstNodeKind::Identifier(_) => true,
-                        _ => false,
-                    };
-
                     print!("{}\n", Style::RESET);
-                    Self::print_helper(&v, file, level + 2, is_terminal);
+                    Self::print_helper(&v, file, level + 2);
                 } else {
                     println!(": {}null{}", Style::BRIGHT_YELLOW, Style::RESET);
                 }
@@ -327,26 +283,19 @@ impl AstPrinter {
                     Self::generate_leader(level + 1),
                     Style::CYAN,
                     Style::BRIGHT_YELLOW,
-                    file.view_span(stmt.name.span),
+                    file.view_span(stmt.name),
                     Style::RESET
                 );
 
                 println!(
-                    "{}{}└── {}Value {}",
+                    "{}{}├── {}Value {}",
                     Style::BRIGHT_BLACK,
                     Self::generate_leader(level + 1),
                     Style::CYAN,
                     Style::RESET
                 );
 
-                let is_terminal = match stmt.value.kind {
-                    AstNodeKind::Integer(_)
-                    | AstNodeKind::Float(_)
-                    | AstNodeKind::Identifier(_) => true,
-                    _ => false,
-                };
-
-                Self::print_helper(&stmt.value, file, level + 2, is_terminal);
+                Self::print_helper(&stmt.value, file, level + 2);
             }
 
             AstNodeKind::Fn(stmt) => {
@@ -364,7 +313,7 @@ impl AstPrinter {
                     Self::generate_leader(level + 1),
                     Style::CYAN,
                     Style::BRIGHT_YELLOW,
-                    file.view_span(stmt.name.span),
+                    file.view_span(stmt.name),
                     Style::RESET
                 );
 
@@ -375,7 +324,7 @@ impl AstPrinter {
                         Self::generate_leader(level + 1),
                         Style::CYAN,
                         Style::BRIGHT_YELLOW,
-                        file.view_span(t.span),
+                        file.view_span(*t),
                         Style::RESET
                     );
                 }
@@ -397,7 +346,7 @@ impl AstPrinter {
                         Self::generate_leader(level + 2),
                         Style::CYAN,
                         Style::BRIGHT_YELLOW,
-                        file.view_span(param.name.span),
+                        file.view_span(param.name),
                         Style::RESET
                     );
 
@@ -408,7 +357,7 @@ impl AstPrinter {
                             Self::generate_leader(level + 3),
                             Style::CYAN,
                             Style::BRIGHT_YELLOW,
-                            file.view_span(var_type.span),
+                            file.view_span(*var_type),
                             Style::RESET
                         );
                     }
@@ -421,15 +370,8 @@ impl AstPrinter {
                             Style::CYAN
                         );
 
-                        let is_terminal = match v.kind {
-                            AstNodeKind::Integer(_)
-                            | AstNodeKind::Float(_)
-                            | AstNodeKind::Identifier(_) => true,
-                            _ => false,
-                        };
-
                         print!("{}\n", Style::RESET);
-                        Self::print_helper(&v, file, level + 4, is_terminal);
+                        Self::print_helper(&v, file, level + 4);
                     }
                 }
 
@@ -441,7 +383,7 @@ impl AstPrinter {
                     Style::RESET
                 );
 
-                Self::print_helper(&stmt.body, file, level + 2, is_terminal);
+                Self::print_helper(&stmt.body, file, level + 2);
             }
 
             AstNodeKind::Call(stmt) => {
@@ -460,7 +402,7 @@ impl AstPrinter {
                     Style::CYAN,
                 );
 
-                Self::print_helper(&stmt.callee, file, level + 2, is_terminal);
+                Self::print_helper(&stmt.callee, file, level + 2);
 
                 if !stmt.args.is_empty() {
                     println!(
@@ -483,14 +425,7 @@ impl AstPrinter {
                         Style::RESET,
                     );
 
-                    let is_terminal = match arg.kind {
-                        AstNodeKind::Integer(_)
-                        | AstNodeKind::Float(_)
-                        | AstNodeKind::Identifier(_) => true,
-                        _ => false,
-                    };
-
-                    Self::print_helper(&arg, file, level + 4, is_terminal);
+                    Self::print_helper(&arg, file, level + 4);
                 }
             }
 
@@ -503,8 +438,8 @@ impl AstPrinter {
                     Style::RESET_BOLD
                 );
 
-                if let Some(e) = stmt {
-                    Self::print_helper(e, file, level + 1, is_terminal);
+                if let Some(e) = &stmt.expr {
+                    Self::print_helper(e, file, level + 1);
                 }
             }
 
@@ -531,6 +466,6 @@ impl AstPrinter {
     }
 
     pub fn print(ast: &Box<AstNode>, file: &IOFile) {
-        Self::print_helper(ast, file, 0, false);
+        Self::print_helper(ast, file, 0);
     }
 }
