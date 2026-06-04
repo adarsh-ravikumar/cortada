@@ -481,6 +481,40 @@ impl AstPrinter {
                     Self::print_helper(&arg, file, level + 4, is_terminal);
                 }
             }
+
+            AstNodeKind::Return(stmt) => {
+                println!(
+                    "{leader}{}{}Return{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                if let Some(e) = stmt {
+                    Self::print_helper(e, file, level + 1, is_terminal);
+                }
+            }
+
+            AstNodeKind::Break => {
+                println!(
+                    "{leader}{}{}Break{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+            }
+
+            AstNodeKind::Continue => {
+                println!(
+                    "{leader}{}{}Continue{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+            }
         }
     }
 
