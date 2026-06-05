@@ -26,21 +26,25 @@ impl<'a> Parser<'a> {
 
         let mut var_type: Option<Span> = None;
 
-        let mut value: Option<Box<AstNode>> = None;
-
         if self.peek(0).kind == TokenKind::Identifier {
             var_type = Some(self.advance().span);
         }
 
-        if let Some(_) = self.matches(TokenKind::Equal) {
-            self.advance();
+        let value: Option<Box<AstNode>>;
 
-            if let Some(_) = self.matches(TokenKind::KwrdNull) {
-                value = None;
-                self.advance();
-            } else {
-                value = Some(self.parse_expression()?);
-            }
+        let value_span: Span;
+
+        self.expect(TokenKind::Equal)?;
+        self.advance();
+
+        if let Some(tok) = self.matches(TokenKind::KwrdNull) {
+            value = None;
+            value_span = tok.span;
+            self.advance();
+        } else {
+            let expr = self.parse_expression()?;
+            value_span = expr.span;
+            value = Some(expr);
         }
 
         let start = name.start;
@@ -49,6 +53,7 @@ impl<'a> Parser<'a> {
             name,
             var_type,
             value,
+            value_span,
             start,
             self.peek(0).span.end,
         ))
@@ -61,11 +66,17 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Equal)?;
         self.advance();
 
-        let value = if let Some(_) = self.matches(TokenKind::KwrdNull) {
+        let value_span: Span;
+
+        let value = if let Some(tok) = self.matches(TokenKind::KwrdNull) {
+            value_span = tok.span;
             self.advance();
+
             None
         } else {
-            Some(self.parse_expression()?)
+            let expr = self.parse_expression()?;
+            value_span = expr.span;
+            Some(expr)
         };
 
         let start = name.start;
@@ -73,6 +84,7 @@ impl<'a> Parser<'a> {
         Ok(AstNode::var_assign(
             name,
             value,
+            value_span,
             start,
             self.peek(0).span.end,
         ))
