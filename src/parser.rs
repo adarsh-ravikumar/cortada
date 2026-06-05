@@ -10,6 +10,6 @@ mod postfix;
 mod statements;
 mod variables;
 
-pub use node::{AstNode, AstNodeKind};
+pub use node::{AstNode, AstNodeKind, VarAssignStatement, VarDeclStatement};
 pub use op::{BinaryOp, UnaryOp};
 pub use parser::Parser;
