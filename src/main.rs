@@ -4,6 +4,7 @@ mod utils;
 
 mod lexer;
 mod parser;
+mod semantic;
 
 mod diagnostic;
 
@@ -11,7 +12,8 @@ use crate::{
     diagnostic::DiagnosticRenderer,
     lexer::Lexer,
     parser::Parser,
-    pretty::{AstPrinter, TokenPrinter},
+    pretty::{AstPrinter, SymbolTablePrinter, TokenPrinter},
+    semantic::SemanticAnalyzer,
 };
 
 fn main() {
@@ -45,4 +47,14 @@ fn main() {
     };
 
     AstPrinter::print(&ast, &file);
+
+    let mut analyzer = SemanticAnalyzer::new(&file, &ast);
+
+    if let Err(diag) = analyzer.build_table() {
+        let report = DiagnosticRenderer::render(diag, &file);
+        println!("\n\n{report}");
+        return;
+    }
+
+    SymbolTablePrinter::print(&analyzer);
 }
