@@ -67,6 +67,72 @@ impl TokenKind {
             _ => Self::Identifier,
         }
     }
+
+    pub fn display(&self) -> &'static str {
+        match self {
+            TokenKind::Newline => "newline",
+            TokenKind::Indent => "indentation",
+            TokenKind::Dedent => "dedentation",
+
+            TokenKind::Identifier => "identifier",
+            TokenKind::Integer => "integer",
+            TokenKind::Float => "float",
+
+            TokenKind::Colon => ":",
+            TokenKind::Comma => ",",
+
+            TokenKind::LeftParen => "(",
+            TokenKind::RightParen => ")",
+
+            TokenKind::LeftBracket => "[",
+            TokenKind::RightBracket => "]",
+
+            TokenKind::LeftBrace => "{",
+            TokenKind::RightBrace => "}",
+
+            TokenKind::DoubleStar => "**",
+            TokenKind::Star => "*",
+            TokenKind::FwdSlash => "/",
+
+            TokenKind::Plus => "+",
+            TokenKind::Hyphen => "-",
+
+            TokenKind::ThinArrow => "->",
+            TokenKind::FatArrow => "=>",
+
+            TokenKind::Dot => ".",
+            TokenKind::DoubleDot => "..",
+
+            TokenKind::RightAngle => ">",
+            TokenKind::GreaterEqual => ">=",
+
+            TokenKind::LeftAngle => "<",
+            TokenKind::LesserEqual => "<=",
+
+            TokenKind::Equal => "=",
+            TokenKind::DoubleEqual => "==",
+            TokenKind::NotEqual => "!=",
+
+            TokenKind::KwrdIf => "if",
+            TokenKind::KwrdElif => "elif",
+            TokenKind::KwrdElse => "else",
+
+            TokenKind::KwrdFor => "for",
+            TokenKind::KwrdWhile => "while",
+
+            TokenKind::KwrdFn => "fn",
+
+            TokenKind::KwrdNot => "not",
+            TokenKind::KwrdAnd => "and",
+            TokenKind::KwrdOr => "or",
+
+            TokenKind::KwrdReturn => "return",
+            TokenKind::KwrdBreak => "break",
+            TokenKind::KwrdContinue => "continue",
+
+            TokenKind::EOF => "end of file",
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
