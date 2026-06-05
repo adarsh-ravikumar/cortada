@@ -1,6 +1,5 @@
 use crate::{
-    common::Span,
-    diagnostic::{Diagnostic, DiagnosticKind},
+    diagnostic::Diagnostic,
     lexer::{Token, TokenKind},
     parser::node::AstNode,
     utils::IOFile,
@@ -30,15 +29,7 @@ impl<'a> Parser<'a> {
 
         self.skip_newlines();
 
-        let cur = self.peek(0);
-
-        if cur.kind != TokenKind::EOF {
-            return Err(Diagnostic::new(
-                DiagnosticKind::Error,
-                format!("[{}] Expected EOF, Got {:?}", self.position, cur.kind),
-                Span::new(self.position, self.position),
-            ));
-        }
+        self.expect(TokenKind::EOF)?;
 
         Ok(res)
     }

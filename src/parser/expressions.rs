@@ -1,6 +1,6 @@
 use crate::{
     common::Span,
-    diagnostic::{Diagnostic, DiagnosticKind},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::TokenKind,
     parser::{BinaryOp, Parser, UnaryOp, node::AstNode, parser::ParserRes},
 };
@@ -156,19 +156,29 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier => AstNode::identifier(next_tok.span.start, next_tok.span.end),
 
             TokenKind::LeftParen => {
-                self.advance();
+                let open_paren_span = self.advance().span;
+
                 let node = self.parse_or_expression()?;
 
                 if self.matches(TokenKind::RightParen).is_none() {
-                    return Err(Diagnostic::new(
-                        DiagnosticKind::Error,
-                        format!(
-                            "[{}] Expected ')', got {:?}",
-                            self.position,
-                            self.peek(0).kind
-                        ),
-                        Span::new(start, self.peek(0).span.end),
-                    ));
+                    return Err(Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnmatchedDelimiter,
+
+                        msg: "unclosed parenthesized expression".into(),
+
+                        primary: Label {
+                            span: Span::new(start, self.peek(0).span.end),
+                            msg: "expected ')'".into(),
+                        },
+
+                        secondary: vec![Label {
+                            span: open_paren_span,
+                            msg: "'(' opened here".into(),
+                        }],
+
+                        notes: vec![],
+                    });
                 }
 
                 self.advance();
@@ -177,14 +187,20 @@ impl<'a> Parser<'a> {
             }
 
             kind => {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!(
-                        "[{}] Expected int, float or identifier, got {:?}",
-                        self.position, kind
-                    ),
-                    Span::new(start, self.peek(0).span.end),
-                ));
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::ExpectedExpression,
+
+                    msg: "expected expression".into(),
+
+                    primary: Label {
+                        span: Span::new(start, self.peek(0).span.end),
+                        msg: format!("found {}", kind.display()),
+                    },
+
+                    secondary: vec![],
+                    notes: vec!["an expression can be a literal, identifier, function call, or parenthesized expression".into(),],
+                });
             }
         };
 

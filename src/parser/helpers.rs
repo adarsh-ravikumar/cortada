@@ -1,5 +1,6 @@
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticKind},
+    common::Span,
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::{Token, TokenKind},
     parser::Parser,
 };
@@ -45,21 +46,60 @@ impl<'a> Parser<'a> {
         if cur.kind == kind { Some(cur) } else { None }
     }
 
+    fn diagnostic_span(&self, tok: &Token) -> Span {
+        match tok.kind {
+            TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {
+                Span::new(tok.span.start, tok.span.start)
+            }
+
+            _ => tok.span,
+        }
+    }
+
+    pub(crate) fn expect_identifier(&self, name: &'static str) -> Result<(), Diagnostic> {
+        let cur = self.peek(0);
+
+        if cur.kind == TokenKind::Identifier {
+            return Ok(());
+        }
+
+        Err(Diagnostic {
+            severity: DiagnosticSeverity::Error,
+            class: DiagnosticClass::ExpectedToken,
+
+            msg: format!("expected {name}"),
+
+            primary: Label {
+                span: self.diagnostic_span(cur),
+                msg: format!("found '{}'", cur.kind.display()),
+            },
+
+            secondary: vec![],
+
+            notes: vec![],
+        })
+    }
     pub(crate) fn expect(&self, kind: TokenKind) -> Result<(), Diagnostic> {
         let cur = self.peek(0);
+
         if cur.kind == kind {
             return Ok(());
         }
 
-        Err(Diagnostic::new(
-            DiagnosticKind::Error,
-            format!(
-                "[{}] Expected '{:?}', got {:?}",
-                self.position,
-                kind,
-                self.peek(0).kind
-            ),
-            cur.span,
-        ))
+        Err(Diagnostic {
+            severity: DiagnosticSeverity::Error,
+            class: DiagnosticClass::ExpectedToken,
+
+            msg: format!("expected '{}'", kind.display()),
+
+            primary: Label {
+                span: self.diagnostic_span(cur),
+                msg: format!("found '{}'", cur.kind.display()),
+            },
+
+            secondary: vec![],
+
+            notes: vec![],
+        })
     }
 }

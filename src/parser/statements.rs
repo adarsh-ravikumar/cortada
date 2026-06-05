@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticKind},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::TokenKind,
     parser::{Parser, node::AstNode, parser::ParserRes},
 };
@@ -34,6 +34,24 @@ impl<'a> Parser<'a> {
             TokenKind::KwrdBreak => self.parse_break_statement(),
             TokenKind::KwrdContinue => self.parse_continue_statement(),
             TokenKind::Identifier => self.parse_ident_leading_statement(),
+
+            TokenKind::Indent => {
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::InvalidLayout,
+
+                    msg: "unexpected indentation".into(),
+
+                    primary: Label {
+                        span: self.peek(0).span,
+                        msg: "no block was started here".into(),
+                    },
+
+                    secondary: vec![],
+
+                    notes: vec![],
+                });
+            }
             _ => self.parse_expression(),
         }
     }
@@ -61,14 +79,21 @@ impl<'a> Parser<'a> {
             TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
 
             t => {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!(
-                        "[{}] Expected terminator after continue, got {:?}",
-                        self.position, t
-                    ),
-                    self.peek(0).span,
-                ));
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UnexpectedToken,
+
+                    msg: "unexpected token after 'break'".into(),
+
+                    primary: Label {
+                        span: self.peek(0).span,
+                        msg: format!("found {}", t.display()),
+                    },
+
+                    secondary: vec![],
+
+                    notes: vec!["'break' does not accept an expression or value".into()],
+                });
             }
         }
 
@@ -83,14 +108,21 @@ impl<'a> Parser<'a> {
             TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
 
             t => {
-                return Err(Diagnostic::new(
-                    DiagnosticKind::Error,
-                    format!(
-                        "[{}] Expected terminator after continue, got {:?}",
-                        self.position, t
-                    ),
-                    self.peek(0).span,
-                ));
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UnexpectedToken,
+
+                    msg: "unexpected token after 'continue'".into(),
+
+                    primary: Label {
+                        span: self.peek(0).span,
+                        msg: format!("found {}", t.display()),
+                    },
+
+                    secondary: vec![],
+
+                    notes: vec!["'continue' does not accept an expression or value".into()],
+                });
             }
         }
 

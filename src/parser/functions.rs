@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::KwrdFn)?;
         self.advance();
 
-        self.expect(TokenKind::Identifier)?;
+        self.expect_identifier("function name")?;
         let name = self.advance().span;
 
         self.expect(TokenKind::LeftParen)?;
@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
         if self.peek(0).kind == TokenKind::ThinArrow {
             self.advance();
 
-            self.expect(TokenKind::Identifier)?;
+            self.expect_identifier("return type")?;
             return_type = Some(self.advance().span);
         }
 
@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn parse_param(&mut self) -> Result<Param, Diagnostic> {
-        self.expect(TokenKind::Identifier)?;
+        self.expect_identifier("parameter name")?;
         let name = self.advance().span;
 
         let mut param_type: Option<Span> = None;
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
         if let Some(_) = self.matches(TokenKind::Colon) {
             self.advance();
 
-            self.expect(TokenKind::Identifier)?;
+            self.expect_identifier("parameter type")?;
             param_type = Some(self.advance().span);
         }
 
