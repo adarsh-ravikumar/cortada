@@ -122,7 +122,6 @@ impl<'a> Parser<'a> {
         self.skip_newlines();
 
         if self.peek(0).kind == TokenKind::EOF {
-            let cur_span = self.peek(0).span;
             return Err(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::InvalidLayout,
