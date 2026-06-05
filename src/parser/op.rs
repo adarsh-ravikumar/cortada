@@ -2,6 +2,7 @@ use core::fmt;
 
 use crate::lexer::TokenKind;
 
+#[derive(Debug)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -59,6 +60,7 @@ impl fmt::Display for BinaryOp {
     }
 }
 
+#[derive(Debug)]
 pub enum UnaryOp {
     Plus,
     Minus,

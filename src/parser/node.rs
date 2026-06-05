@@ -1,21 +1,25 @@
 use crate::common::Span;
 use crate::parser::{BinaryOp, UnaryOp};
 
+#[derive(Debug)]
 pub struct Statements {
     pub stmts: Vec<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct VarDeclStatement {
     pub name: Span,
     pub var_type: Option<Span>,
     pub value: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct VarAssignStatement {
     pub name: Span,
-    pub value: Box<AstNode>,
+    pub value: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct FnStatement {
     pub name: Span,
     pub return_type: Option<Span>,
@@ -23,18 +27,21 @@ pub struct FnStatement {
     pub body: Box<AstNode>,
 }
 
+#[derive(Debug)]
 pub struct Param {
     pub name: Span,
     pub param_type: Option<Span>,
     pub default_value: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct WhileStatement {
     pub condition: Box<AstNode>,
     pub body: Box<AstNode>,
     pub else_stmt: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct IfStatement {
     pub condition: Box<AstNode>,
     pub body: Box<AstNode>,
@@ -42,39 +49,47 @@ pub struct IfStatement {
     pub else_stmt: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct ElifBranch {
     pub condition: Box<AstNode>,
     pub body: Box<AstNode>,
 }
 
+#[derive(Debug)]
 pub struct ReturnStatement {
     pub expr: Option<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct BinaryExpr {
     pub lhs: Box<AstNode>,
     pub rhs: Box<AstNode>,
     pub op: BinaryOp,
 }
 
+#[derive(Debug)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub operand: Box<AstNode>,
 }
 
+#[derive(Debug)]
 pub struct CallExpr {
     pub callee: Box<AstNode>,
     pub args: Vec<Box<AstNode>>,
 }
 
+#[derive(Debug)]
 pub struct IntegerExpr {
     pub value: i64,
 }
 
+#[derive(Debug)]
 pub struct FloatExpr {
     pub value: f64,
 }
 
+#[derive(Debug)]
 pub enum AstNodeKind {
     Statements(Statements),
 
@@ -100,6 +115,7 @@ pub enum AstNodeKind {
 }
 
 // Node
+#[derive(Debug)]
 pub struct AstNode {
     pub kind: AstNodeKind,
     pub span: Span,
@@ -130,7 +146,12 @@ impl AstNode {
         })
     }
 
-    pub fn var_assign(name: Span, value: Box<AstNode>, start: usize, end: usize) -> Box<Self> {
+    pub fn var_assign(
+        name: Span,
+        value: Option<Box<AstNode>>,
+        start: usize,
+        end: usize,
+    ) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::VarAssign(VarAssignStatement { name, value }),
             span: Span::new(start, end),

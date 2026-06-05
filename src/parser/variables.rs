@@ -34,7 +34,13 @@ impl<'a> Parser<'a> {
 
         if let Some(_) = self.matches(TokenKind::Equal) {
             self.advance();
-            value = Some(self.parse_expression()?);
+
+            if let Some(_) = self.matches(TokenKind::KwrdNull) {
+                value = None;
+                self.advance();
+            } else {
+                value = Some(self.parse_expression()?);
+            }
         }
 
         let start = name.start;
@@ -55,7 +61,12 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Equal)?;
         self.advance();
 
-        let value = self.parse_expression()?;
+        let value = if let Some(_) = self.matches(TokenKind::KwrdNull) {
+            self.advance();
+            None
+        } else {
+            Some(self.parse_expression()?)
+        };
 
         let start = name.start;
 
