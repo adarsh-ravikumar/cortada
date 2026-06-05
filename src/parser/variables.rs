@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
             value,
             value_span,
             start,
-            self.peek(0).span.end,
+            self.peek(0).span.start,
         ))
     }
 
