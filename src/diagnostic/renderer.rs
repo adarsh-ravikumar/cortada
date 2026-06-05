@@ -107,7 +107,7 @@ impl DiagnosticRenderer {
 
         for note in notes {
             res.push_str(&format!(
-                "{}{}note: {}{}{}",
+                "{}{}note: {}{}{}\n",
                 Style::BOLD,
                 Style::CYAN,
                 note,
