@@ -34,6 +34,10 @@ impl IOFile {
         let mut starts: Vec<usize> = vec![0];
 
         for (idx, byte) in src.iter().enumerate() {
+            if idx == src.len() - 1 {
+                continue;
+            }
+
             if *byte == b'\n' {
                 starts.push(idx + 1);
             }
@@ -43,21 +47,29 @@ impl IOFile {
     }
 
     pub fn line_from_index(&self, idx: usize) -> Option<usize> {
+        if idx == self.src.len() {
+            return Some(self.line_starts.len() - 1);
+        }
+
         let line = self.line_starts.partition_point(|&start| start <= idx);
 
         line.checked_sub(1)
     }
 
     pub fn line(&self, line: usize) -> &str {
-        let line_start = self.line_starts[line - 1];
+        let start = self.line_starts[line - 1];
 
-        let line_end = if line == self.line_starts.len() - 1 {
+        let mut end = if line == self.line_starts.len() {
             self.src.len()
         } else {
-            self.line_starts[line] - 1
+            self.line_starts[line]
         };
 
-        std::str::from_utf8(&self.src[line_start..line_end])
+        if end > start && self.src[end - 1] == b'\n' {
+            end -= 1;
+        }
+
+        std::str::from_utf8(&self.src[start..end])
             .expect("UTF-8 error when attempting to read source")
     }
 
