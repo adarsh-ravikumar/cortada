@@ -4,11 +4,7 @@ statement  -> var_decl | var_assign | fn_stmt | while_stmt | if_stmt
             | return_stmt | break_stmt | continue_stmt
             | expression
 
-var_decl   -> IDENTIFIER COLON 
-              (
-                  EQUAL expression
-                | IDENTIFIER (EQUAL expression)?
-              )
+var_decl   -> IDENTIFIER COLON IDENTIFIER? EQUAL expression
 
 var_assign -> IDENTIFIER EQUAL expression
 
