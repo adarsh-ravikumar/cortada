@@ -34,6 +34,7 @@ pub enum TokenKind {
     FatArrow,
     Equal,
     NotEqual,
+
     KwrdIf,
     KwrdElif,
     KwrdElse,
@@ -46,6 +47,8 @@ pub enum TokenKind {
     KwrdReturn,
     KwrdBreak,
     KwrdContinue,
+    KwrdNull,
+
     EOF,
 }
 
@@ -64,6 +67,7 @@ impl TokenKind {
             "return" => Self::KwrdReturn,
             "break" => Self::KwrdBreak,
             "continue" => Self::KwrdContinue,
+            "null" => Self::KwrdNull,
             _ => Self::Identifier,
         }
     }
@@ -129,6 +133,7 @@ impl TokenKind {
             TokenKind::KwrdReturn => "return",
             TokenKind::KwrdBreak => "break",
             TokenKind::KwrdContinue => "continue",
+            TokenKind::KwrdNull => "null",
 
             TokenKind::EOF => "end of file",
         }
