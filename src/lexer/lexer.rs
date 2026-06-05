@@ -458,7 +458,7 @@ impl<'a> Lexer<'a> {
 
                     tokens.push(token);
 
-                    return Ok(tokens);
+                    break;
                 }
 
                 TokenKind::Newline => {
@@ -473,6 +473,34 @@ impl<'a> Lexer<'a> {
                 _ => tokens.push(token),
             }
         }
+
+        if let Some(open) = self.delimiter.pop() {
+            let eof_pos = tokens.last().unwrap().span.start;
+
+            return Err(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::UnmatchedDelimiter,
+
+                msg: "unclosed delimiter".into(),
+
+                primary: Label {
+                    span: Span::new(eof_pos, eof_pos),
+                    msg: format!(
+                        "expected '{}' before end of file",
+                        char::from(Delimiter::pair(open.ch))
+                    ),
+                },
+
+                secondary: vec![Label {
+                    span: Span::new(open.start, open.start + 1),
+                    msg: format!("'{}' opened here", char::from(open.ch)),
+                }],
+
+                notes: vec![],
+            });
+        };
+
+        Ok(tokens)
     }
 
     // Errors
