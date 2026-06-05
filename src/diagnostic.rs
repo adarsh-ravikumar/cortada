@@ -1,5 +1,5 @@
 mod diagnostic;
-mod logger;
+mod renderer;
 
-pub use diagnostic::{Diagnostic, DiagnosticKind};
-pub use logger::Logger;
+pub use diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label};
+pub use renderer::DiagnosticRenderer;

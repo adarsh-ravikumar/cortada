@@ -1,7 +1,7 @@
-use core::{fmt, num};
+use core::fmt;
 
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticSeverity, Label},
     utils::{IOFile, Style},
 };
 
@@ -33,7 +33,7 @@ impl DiagnosticRenderer {
         let (line, col) = file.line_col_from_index(diag.primary.span.start);
 
         format!(
-            "{}-->{} {}:{}:{}\n",
+            "{}-->{} {}:{}:{}\n\n",
             Style::BRIGHT_BLUE,
             Style::RESET,
             file.path.display(),
@@ -49,7 +49,7 @@ impl DiagnosticRenderer {
         if start_line != end_line {
             // this is a multi-line spanning highlight. we shall politely ignore
             return format!(
-                "Mutli-line higlights not implemented. Unable to render source for message '{}'",
+                "Mutli-line higlights not implemented. Unable to render source for message '{}'\n",
                 label.msg
             );
         }
@@ -61,14 +61,14 @@ impl DiagnosticRenderer {
 
         // next, we start building the gutter
 
-        // the first line is just there as a spacer
-        res.push_str(&format!(
-            "{}{}   │{}{}\n",
-            Style::BOLD,
-            Style::BRIGHT_BLACK,
-            Style::RESET,
-            Style::RESET_BOLD,
-        ));
+        // // the first line is just there as a spacer
+        // res.push_str(&format!(
+        //     "{}{}   │{}{}\n",
+        //     Style::BOLD,
+        //     Style::BRIGHT_BLACK,
+        //     Style::RESET,
+        //     Style::RESET_BOLD,
+        // ));
 
         // now comes the actual line
         res.push_str(&format!(
@@ -83,17 +83,8 @@ impl DiagnosticRenderer {
 
         // followed by the highlight
         // it will be hard-coded red for now cuz no warnings yet
-        println!(
-            "line_start: {} span_start: {} start_line: {}, col_start: {} col_end: {}",
-            file.line_starts[start_line - 1],
-            label.span.start,
-            start_line,
-            start_col,
-            end_col
-        );
-
         let num_spaces = label.span.start - file.line_starts[start_line - 1];
-        let num_carets = end_col - start_col + 1;
+        let num_carets = usize::max(end_col - start_col, 1);
 
         let space = " ".repeat(num_spaces);
         let highlight = "^".repeat(num_carets);

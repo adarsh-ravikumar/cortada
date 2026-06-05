@@ -8,7 +8,7 @@ mod parser;
 mod diagnostic;
 
 use crate::{
-    diagnostic::Logger,
+    diagnostic::DiagnosticRenderer,
     lexer::Lexer,
     parser::Parser,
     pretty::{AstPrinter, TokenPrinter},
@@ -24,7 +24,11 @@ fn main() {
 
     let toks = match lexer.tokenize() {
         Ok(t) => t,
-        Err(e) => return println!("{}", Logger::generate_log(&file, e)),
+        Err(diag) => {
+            let report = DiagnosticRenderer::render(diag, &file);
+            println!("\n\n{report}");
+            return;
+        }
     };
 
     TokenPrinter::print(&toks, &file);
@@ -33,7 +37,11 @@ fn main() {
 
     let ast = match parser.parse() {
         Ok(a) => a,
-        Err(e) => return println!("{}", Logger::generate_log(&file, e)),
+        Err(diag) => {
+            let report = DiagnosticRenderer::render(diag, &file);
+            println!("\n\n{report}");
+            return;
+        }
     };
 
     AstPrinter::print(&ast, &file);
