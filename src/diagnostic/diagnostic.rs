@@ -6,13 +6,20 @@ pub enum DiagnosticSeverity {
 }
 
 pub enum DiagnosticClass {
+    // lexer
     UnexpectedChar,
     UnmatchedDelimiter,
 
+    // parser
     ExpectedToken,
     ExpectedExpression,
     UnexpectedToken,
     InvalidLayout,
+
+    // semantic
+    UndefinedIdentifier,
+    TypeMismatch,
+    UnknownType,
 }
 
 impl DiagnosticClass {
@@ -21,10 +28,14 @@ impl DiagnosticClass {
             Self::UnexpectedChar => "E001",
             Self::UnmatchedDelimiter => "E002",
 
-            Self::ExpectedToken => "E003",
-            Self::ExpectedExpression => "E004",
-            Self::UnexpectedToken => "E005",
-            Self::InvalidLayout => "E006",
+            Self::ExpectedToken => "E101",
+            Self::ExpectedExpression => "E102",
+            Self::UnexpectedToken => "E103",
+            Self::InvalidLayout => "E104",
+
+            Self::UndefinedIdentifier => "E201",
+            Self::TypeMismatch => "E202",
+            Self::UnknownType => "E203",
         }
     }
 }
