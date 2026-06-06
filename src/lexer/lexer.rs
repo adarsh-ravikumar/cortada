@@ -131,10 +131,12 @@ impl<'a> Lexer<'a> {
                         primary: Label {
                             span: Span::new(self.position - 1, self.position - 1),
                             msg: "expected closing '~~~' before end of file".into(),
+                            paranthesise: false,
                         },
                         secondary: vec![Label {
                             span: start,
                             msg: "comment started here".into(),
+                            paranthesise: false,
                         }],
                         notes: vec!["multi-line comments must be terminated with '~~~'".into()],
                     });
@@ -306,6 +308,7 @@ impl<'a> Lexer<'a> {
                         primary: Label {
                             span: Span::new(start, start),
                             msg: "'!' is not a valid token".into(),
+                            paranthesise: false,
                         },
                         secondary: vec![],
                         notes: vec!["if you meant not-equal, use '!='".into()],
@@ -332,6 +335,7 @@ impl<'a> Lexer<'a> {
                     primary: Label {
                         span: Span::new(start, start),
                         msg: format!("'{}' is not a valid token", char::from(ch)),
+                        paranthesise: false,
                     },
                     secondary: vec![],
                     notes: vec![],
@@ -370,6 +374,7 @@ impl<'a> Lexer<'a> {
                             primary: Label {
                                 span: Span::new(start, self.position),
                                 msg: format!("indentation contains both tabs and spaces"),
+                                paranthesise: false,
                             },
                             secondary: vec![],
                             notes: vec!["use only tabs or only spaces for indentation".into()],
@@ -417,6 +422,7 @@ impl<'a> Lexer<'a> {
                     primary: Label {
                         span: Span::new(start, self.position),
                         msg: format!("indentation level is {indent}"),
+                        paranthesise: false,
                     },
 
                     secondary: vec![],
@@ -488,11 +494,13 @@ impl<'a> Lexer<'a> {
                         "expected '{}' before end of file",
                         char::from(Delimiter::pair(open.ch))
                     ),
+                    paranthesise: false,
                 },
 
                 secondary: vec![Label {
                     span: Span::new(open.start, open.start + 1),
                     msg: format!("'{}' opened here", char::from(open.ch)),
+                    paranthesise: false,
                 }],
 
                 notes: vec![],
@@ -511,6 +519,7 @@ impl<'a> Lexer<'a> {
             primary: Label {
                 span: Span::new(got.start, got.start),
                 msg: format!("Found '{}'", char::from(got.ch)),
+                paranthesise: false,
             },
             secondary: vec![],
             notes: vec![],
@@ -529,10 +538,12 @@ impl<'a> Lexer<'a> {
             primary: Label {
                 span: Span::new(got.start, got.start),
                 msg: format!("expected '{}'", char::from(Delimiter::pair(expected.ch))),
+                paranthesise: false,
             },
             secondary: vec![Label {
                 span: Span::new(expected.start, expected.start),
                 msg: format!("'{}' opened here", char::from(expected.ch)),
+                paranthesise: false,
             }],
             notes: vec![],
         }

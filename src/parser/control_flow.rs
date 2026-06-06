@@ -131,6 +131,7 @@ impl<'a> Parser<'a> {
                 primary: Label {
                     span: Span::new(col_span.start, col_span.end),
                     msg: "expected indented body before end of file".into(),
+                    paranthesise: false,
                 },
 
                 secondary: vec![],
@@ -150,11 +151,13 @@ impl<'a> Parser<'a> {
                 primary: Label {
                     span: Span::new(col_span.start, col_span.end),
                     msg: "a block must be indented after ':'".into(),
+                    paranthesise: false,
                 },
 
                 secondary: vec![Label {
                     span: Span::new(cur_span.start, cur_span.end),
                     msg: "expected indentation before this statement".into(),
+                    paranthesise: false,
                 }],
 
                 notes: vec![],
@@ -188,6 +191,7 @@ impl<'a> Parser<'a> {
                     primary: Label {
                         span: tok.span,
                         msg: "this line is indented but no new block was started".into(),
+                        paranthesise: false,
                     },
 
                     secondary: vec![],

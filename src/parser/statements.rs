@@ -45,6 +45,7 @@ impl<'a> Parser<'a> {
                     primary: Label {
                         span: self.peek(0).span,
                         msg: "no block was started here".into(),
+                        paranthesise: false,
                     },
 
                     secondary: vec![],
@@ -88,6 +89,7 @@ impl<'a> Parser<'a> {
                     primary: Label {
                         span: self.peek(0).span,
                         msg: format!("found {}", t.display()),
+                        paranthesise: false,
                     },
 
                     secondary: vec![],
@@ -117,6 +119,7 @@ impl<'a> Parser<'a> {
                     primary: Label {
                         span: self.peek(0).span,
                         msg: format!("found {}", t.display()),
+                        paranthesise: false,
                     },
 
                     secondary: vec![],

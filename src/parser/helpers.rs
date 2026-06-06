@@ -72,6 +72,7 @@ impl<'a> Parser<'a> {
             primary: Label {
                 span: self.diagnostic_span(cur),
                 msg: format!("found '{}'", cur.kind.display()),
+                paranthesise: false,
             },
 
             secondary: vec![],
@@ -95,6 +96,7 @@ impl<'a> Parser<'a> {
             primary: Label {
                 span: self.diagnostic_span(cur),
                 msg: format!("found '{}'", cur.kind.display()),
+                paranthesise: false,
             },
 
             secondary: vec![],

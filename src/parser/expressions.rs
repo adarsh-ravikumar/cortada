@@ -20,6 +20,7 @@ impl<'a> Parser<'a> {
         let mut lhs = lhs_fn(self)?;
 
         while let Some(tok) = self.matches_any(pattern) {
+            let op_span = tok.span;
             let op = BinaryOp::from(tok.kind);
             self.advance();
 
@@ -27,7 +28,7 @@ impl<'a> Parser<'a> {
 
             let end = rhs.span.end;
 
-            lhs = AstNode::binary(lhs, rhs, op, start, end)
+            lhs = AstNode::binary(lhs, rhs, op, op_span, start, end)
         }
 
         Ok(lhs)
@@ -53,6 +54,7 @@ impl<'a> Parser<'a> {
         let start = self.peek(0).span.start;
 
         if let Some(tok) = self.matches(TokenKind::KwrdNot) {
+            let op_span = tok.span;
             let op = UnaryOp::from(tok.kind);
 
             self.advance();
@@ -61,7 +63,7 @@ impl<'a> Parser<'a> {
 
             let end = operand.span.end;
 
-            return Ok(AstNode::unary(op, operand, start, end));
+            return Ok(AstNode::unary(op, op_span, operand, start, end));
         }
 
         self.parse_boolean_expression()
@@ -102,6 +104,7 @@ impl<'a> Parser<'a> {
         let start = self.peek(0).span.start;
 
         if let Some(tok) = self.matches_any(&[TokenKind::Plus, TokenKind::Hyphen]) {
+            let op_span = tok.span;
             let op = UnaryOp::from(tok.kind);
 
             self.advance();
@@ -110,7 +113,7 @@ impl<'a> Parser<'a> {
 
             let end = operand.span.end;
 
-            return Ok(AstNode::unary(op, operand, start, end));
+            return Ok(AstNode::unary(op, op_span, operand, start, end));
         }
 
         self.parse_postfix()
@@ -170,11 +173,13 @@ impl<'a> Parser<'a> {
                         primary: Label {
                             span: Span::new(start, self.peek(0).span.end),
                             msg: "expected ')'".into(),
+                            paranthesise: false,
                         },
 
                         secondary: vec![Label {
                             span: open_paren_span,
                             msg: "'(' opened here".into(),
+                            paranthesise: false,
                         }],
 
                         notes: vec![],
@@ -196,6 +201,7 @@ impl<'a> Parser<'a> {
                     primary: Label {
                         span: Span::new(start, self.peek(0).span.end),
                         msg: format!("found {}", kind.display()),
+                            paranthesise: false,
                     },
 
                     secondary: vec![],

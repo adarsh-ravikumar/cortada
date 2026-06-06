@@ -67,11 +67,13 @@ pub struct BinaryExpr {
     pub lhs: Box<AstNode>,
     pub rhs: Box<AstNode>,
     pub op: BinaryOp,
+    pub op_span: Span,
 }
 
 #[derive(Debug)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
+    pub op_span: Span,
     pub operand: Box<AstNode>,
 }
 
@@ -247,18 +249,34 @@ impl AstNode {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         op: BinaryOp,
+        op_span: Span,
         start: usize,
         end: usize,
     ) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Binary(BinaryExpr { lhs, rhs, op }),
+            kind: AstNodeKind::Binary(BinaryExpr {
+                lhs,
+                rhs,
+                op,
+                op_span,
+            }),
             span: Span::new(start, end),
         })
     }
 
-    pub fn unary(op: UnaryOp, operand: Box<AstNode>, start: usize, end: usize) -> Box<Self> {
+    pub fn unary(
+        op: UnaryOp,
+        op_span: Span,
+        operand: Box<AstNode>,
+        start: usize,
+        end: usize,
+    ) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Unary(UnaryExpr { op, operand }),
+            kind: AstNodeKind::Unary(UnaryExpr {
+                op,
+                operand,
+                op_span,
+            }),
             span: Span::new(start, end),
         })
     }
