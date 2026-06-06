@@ -20,6 +20,7 @@ pub enum DiagnosticClass {
     UndefinedIdentifier,
     TypeMismatch,
     UnknownType,
+    UnsupportedOperator,
 }
 
 impl DiagnosticClass {
@@ -36,6 +37,7 @@ impl DiagnosticClass {
             Self::UndefinedIdentifier => "E201",
             Self::TypeMismatch => "E202",
             Self::UnknownType => "E203",
+            Self::UnsupportedOperator => "E204",
         }
     }
 }
@@ -43,6 +45,7 @@ impl DiagnosticClass {
 pub struct Label {
     pub span: Span,
     pub msg: String,
+    pub paranthesise: bool,
 }
 
 pub struct Diagnostic {
