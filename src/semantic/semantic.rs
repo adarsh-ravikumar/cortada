@@ -1,9 +1,8 @@
 use crate::{
-    common::Span,
+    common::{IOFile, Span},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     parser::{AstNode, AstNodeKind, VarAssignStatement, VarDeclStatement},
     semantic::{SymbolTable, symbol_table::SymbolType},
-    utils::IOFile,
 };
 
 pub struct SemanticAnalyzer<'a> {

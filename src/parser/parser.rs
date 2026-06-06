@@ -1,8 +1,8 @@
 use crate::{
+    common::IOFile,
     diagnostic::Diagnostic,
     lexer::{Token, TokenKind},
     parser::node::AstNode,
-    utils::IOFile,
 };
 
 pub struct Parser<'a> {

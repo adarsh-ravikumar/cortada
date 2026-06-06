@@ -1,6 +1,7 @@
 use crate::{
+    common::IOFile,
     parser::{AstNode, AstNodeKind},
-    utils::{IOFile, Style},
+    utils::Style,
 };
 
 pub struct AstPrinter;

@@ -1,8 +1,7 @@
 use crate::{
-    common::Span,
+    common::{IOFile, Span},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::{Token, TokenKind},
-    utils::IOFile,
 };
 
 struct Delimiter {

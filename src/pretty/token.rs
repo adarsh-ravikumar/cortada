@@ -1,6 +1,7 @@
 use crate::{
+    common::IOFile,
     lexer::{Token, TokenKind},
-    utils::{IOFile, Style},
+    utils::Style,
 };
 
 pub struct TokenPrinter;

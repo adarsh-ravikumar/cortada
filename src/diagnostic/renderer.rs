@@ -1,8 +1,9 @@
 use core::fmt;
 
 use crate::{
+    common::IOFile,
     diagnostic::{Diagnostic, DiagnosticSeverity, Label},
-    utils::{IOFile, Style},
+    utils::Style,
 };
 
 pub struct DiagnosticRenderer;
