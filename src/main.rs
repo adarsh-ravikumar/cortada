@@ -13,7 +13,7 @@ use crate::{
     diagnostic::DiagnosticRenderer,
     lexer::Lexer,
     parser::Parser,
-    pretty::{AstPrinter, SymbolTablePrinter, TokenPrinter},
+    pretty::{AnnotatedTreePrinter, AstPrinter, TokenPrinter},
     semantic::SemanticAnalyzer,
 };
 
@@ -34,6 +34,7 @@ fn main() {
         }
     };
 
+    println!("TOKENS:");
     TokenPrinter::print(&toks, &file);
 
     let mut parser = Parser::new(&file, &toks);
@@ -47,15 +48,22 @@ fn main() {
         }
     };
 
+    println!("ABSTRACT SYNTAX TREE:");
     AstPrinter::print(&ast, &file);
+    println!("\n");
 
-    let mut analyzer = SemanticAnalyzer::new(&file, &ast);
+    let mut analyzer = SemanticAnalyzer::new(&file);
 
-    if let Err(diag) = analyzer.build_table() {
-        let report = DiagnosticRenderer::render(diag, &file);
-        println!("\n\n{report}");
-        return;
-    }
+    let annotated_tree = match analyzer.create_annotated_tree(ast) {
+        Ok(a) => a,
+        Err(diag) => {
+            let report = DiagnosticRenderer::render(diag, &file);
+            println!("\n\n{report}");
+            return;
+        }
+    };
 
-    SymbolTablePrinter::print(&analyzer);
+    println!("ANNOTATED ABSTRACT SYNTAX TREE:");
+    AnnotatedTreePrinter::print(&annotated_tree);
+    println!("\n");
 }

@@ -1,254 +1,302 @@
 use crate::{
-    common::{IOFile, Span},
+    common::{IOFile, Span, SymbolPool, Type},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
-    parser::{AstNode, AstNodeKind, VarAssignStatement, VarDeclStatement},
-    semantic::{SymbolTable, symbol_table::SymbolType},
+    parser::{AstNode, AstNodeKind, BinaryExpr, FloatExpr, IntegerExpr, Statements, UnaryExpr},
+    semantic::{
+        CastAnnotation,
+        annotated_node::{
+            AnnotatedTree, AtomAnnotation, BinaryAnnotation, ExpressionAnnotation, FloatAnnotation,
+            IntegerAnnotation, StatementAnnotation, UnaryAnnotation,
+        },
+        operator::{BinaryOpAnnotation, UnaryOpAnnotation},
+    },
 };
 
 pub struct SemanticAnalyzer<'a> {
     file: &'a IOFile,
-    ast: &'a Box<AstNode>,
-    pub table: SymbolTable<'a>,
+    pub pool: SymbolPool<'a>,
 }
 
 impl<'a> SemanticAnalyzer<'a> {
-    pub fn new(file: &'a IOFile, ast: &'a Box<AstNode>) -> Self {
+    pub fn new(file: &'a IOFile) -> Self {
         Self {
             file,
-            ast,
-            table: SymbolTable::new(),
+            pool: SymbolPool::new(file),
         }
     }
 
-    fn symbol_from_span(&self, span: Span) -> &'a str {
-        self.file.view_span(span)
-    }
+    pub fn annotate_statements(
+        &mut self,
+        statements: Statements,
+    ) -> Result<AnnotatedTree, Diagnostic> {
+        let stmts = statements.stmts;
+        let mut annotated: Vec<StatementAnnotation> = Vec::new();
 
-    fn type_from_ident(&self, span: Span) -> Result<SymbolType, Diagnostic> {
-        let var_type = self.symbol_from_span(span);
-
-        match var_type {
-            "int" => Ok(SymbolType::Integer),
-            "float" => Ok(SymbolType::Float),
-            "null" => Ok(SymbolType::Null),
-            _ => Err(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::UnknownType,
-
-                msg: format!("unknown type `{}`", var_type),
-
-                primary: Label {
-                    span: span,
-                    msg: "this type is not defined".into(),
-                },
-
-                secondary: vec![],
-
-                notes: vec![],
-            }),
-        }
-    }
-
-    fn visit_expression(&self, expr: &Option<Box<AstNode>>) -> Result<SymbolType, Diagnostic> {
-        if expr.is_none() {
-            return Ok(SymbolType::Null);
+        for stmt in stmts {
+            annotated.push(self.annotate_statement(stmt)?);
         }
 
-        let expr = expr.as_ref().unwrap();
-
-        let expr_type = match &expr.kind {
-            AstNodeKind::Integer(_) => SymbolType::Integer,
-            AstNodeKind::Float(_) => SymbolType::Float,
-            AstNodeKind::Identifier => self.visit_identifier(expr.span)?,
-            _ => unreachable!(),
-        };
-
-        Ok(expr_type)
-    }
-
-    fn visit_identifier(&self, span: Span) -> Result<SymbolType, Diagnostic> {
-        let symbol = self.symbol_from_span(span);
-
-        if let Some(entry) = self.table.entry(symbol) {
-            return Ok(entry.symbol_type);
-        }
-
-        Err(Diagnostic {
-            severity: DiagnosticSeverity::Error,
-            class: DiagnosticClass::UndefinedIdentifier,
-
-            msg: format!("identifier `{}` is not defined", symbol),
-
-            primary: Label {
-                span: span,
-                msg: "unknown identifier".into(),
-            },
-
-            secondary: vec![],
-
-            notes: vec!["identifiers must be declared before they can be used".into()],
+        Ok(AnnotatedTree {
+            statements: annotated,
         })
     }
 
-    fn visit_var_declare(
+    pub fn annotate_statement(
         &mut self,
-        decl: &VarDeclStatement,
-        decl_span: Span,
-    ) -> Result<(), Diagnostic> {
-        println!("{}", decl_span);
-        let symbol = self.symbol_from_span(decl.name);
-
-        let expr_type = self.visit_expression(&decl.value)?;
-
-        let symbol_type: SymbolType;
-
-        if let Some(var_type) = decl.var_type {
-            symbol_type = self.type_from_ident(var_type)?;
-
-            if expr_type != symbol_type {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::TypeMismatch,
-
-                    msg: format!(
-                        "cannot assign value of type `{}` to variable `{}` of type `{}`",
-                        expr_type.display(),
-                        symbol,
-                        symbol_type.display(),
-                    ),
-
-                    primary: Label {
-                        span: decl.name,
-                        msg: format!("this expression has type `{}`", expr_type.display()),
-                    },
-
-                    secondary: vec![Label {
-                        span: var_type,
-                        msg: format!(
-                            "`{}` declared with type `{}`",
-                            symbol,
-                            symbol_type.display()
-                        ),
-                    }],
-
-                    notes: vec![],
-                });
+        statement: Box<AstNode>,
+    ) -> Result<StatementAnnotation, Diagnostic> {
+        match statement.kind {
+            AstNodeKind::Binary(_) | AstNodeKind::Unary(_) => {
+                let expr = *self.annotate_expression(statement)?;
+                Ok(StatementAnnotation::Expression(expr))
             }
-        } else {
-            symbol_type = expr_type;
-        };
 
-        self.table.insert(symbol, symbol_type, decl_span, decl.name);
+            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier => {
+                let atom_annotated = self.annotate_atom(statement)?;
+                Ok(StatementAnnotation::Expression(ExpressionAnnotation::Atom(
+                    atom_annotated,
+                )))
+            }
 
-        Ok(())
+            _ => panic!("not implemented"),
+        }
     }
 
-    fn visit_var_assign(&mut self, assign: &VarAssignStatement) -> Result<(), Diagnostic> {
-        let symbol = self.symbol_from_span(assign.name);
+    pub fn annotate_expression(
+        &mut self,
+        expression: Box<AstNode>,
+    ) -> Result<Box<ExpressionAnnotation>, Diagnostic> {
+        let span = expression.span;
 
-        let entry = self.table.entry(symbol);
+        let expr = match expression.kind {
+            AstNodeKind::Binary(expr) => {
+                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span)?)
+            }
 
-        if entry.is_none() {
+            AstNodeKind::Unary(expr) => {
+                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span)?)
+            }
+
+            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier => {
+                let atom_annotated = self.annotate_atom(expression)?;
+                ExpressionAnnotation::Atom(atom_annotated)
+            }
+
+            _ => panic!("invalid expression"),
+        };
+
+        // do some type checking perhaps
+
+        Ok(Box::new(expr))
+    }
+
+    pub fn annotate_cast(
+        &mut self,
+        from: Type,
+        to: Type,
+        expr: Box<ExpressionAnnotation>,
+    ) -> Box<ExpressionAnnotation> {
+        Box::new(ExpressionAnnotation::Cast(CastAnnotation {
+            from,
+            to,
+            expr,
+        }))
+    }
+
+    pub fn annotate_binary_expression(
+        &mut self,
+        expr: BinaryExpr,
+        span: Span,
+    ) -> Result<BinaryAnnotation, Diagnostic> {
+        let lhs_span = expr.lhs.span;
+        let rhs_span = expr.rhs.span;
+
+        let lhs = self.annotate_expression(expr.lhs)?;
+        let mut rhs = self.annotate_expression(expr.rhs)?;
+
+        let op = BinaryOpAnnotation {
+            operator: expr.op,
+            span: expr.op_span,
+        };
+
+        let lhs_type = lhs.get_type();
+        let rhs_type = rhs.get_type();
+
+        let expr_type;
+
+        if let Some(t) = op.get_result_type(lhs_type, rhs_type) {
+            expr_type = t;
+        }
+        // try cast
+        else if let Some(t) = op.try_cast(lhs_type, rhs_type) {
+            let (target_type, evaled_type) = t;
+            rhs = self.annotate_cast(rhs_type, target_type, rhs);
+            expr_type = evaled_type
+        }
+        // bad operation
+        else {
             return Err(Diagnostic {
                 severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::UndefinedIdentifier,
-
-                msg: format!("cannot assign to undefined identifier `{}`", symbol),
-
-                primary: Label {
-                    span: assign.name,
-                    msg: "assignment target is not defined".into(),
-                },
-
-                secondary: vec![],
-
-                notes: vec!["variables must be declared before they can be assigned to".into()],
-            });
-        }
-
-        let entry = entry.unwrap();
-
-        // then we visit the value as well
-        let expr_type = self.visit_expression(&assign.value)?;
-
-        // this means no type was assigned previously
-        // we infer the type here
-        if expr_type == SymbolType::Null {
-            self.table.assign_type(symbol, expr_type);
-
-            return Ok(());
-        }
-
-        // compare types
-
-        if expr_type != entry.symbol_type {
-            return Err(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::TypeMismatch,
+                class: DiagnosticClass::UnsupportedOperator,
 
                 msg: format!(
-                    "cannot assign value of type `{}` to variable `{}` of type `{}`",
-                    expr_type.display(),
-                    symbol,
-                    entry.symbol_type.display(),
+                    "cannot apply operator '{}' to values of type '{}' and '{}'",
+                    op.operator,
+                    lhs_type.display(),
+                    rhs_type.display()
                 ),
 
                 primary: Label {
-                    span: assign.value_span,
-                    msg: format!("this expression has type `{}`", expr_type.display()),
+                    span: op.span,
+                    msg: format!(
+                        "'{}' is not defined for '{}' and '{}'",
+                        op.operator,
+                        lhs_type.display(),
+                        rhs_type.display()
+                    ),
+                    paranthesise: false,
                 },
 
-                secondary: vec![Label {
-                    span: entry.decl_span,
-                    msg: format!(
-                        "`{}` was declared here with type `{}`",
-                        symbol,
-                        entry.symbol_type.display()
-                    ),
-                }],
-
-                notes: vec![
-                    format!("variables retain the type established by their declaration"),
-                    format!(
-                        "if you intend `{}` to have type `{}` from this point onward, consider shadowing it with a new declaration",
-                        symbol,
-                        expr_type.display(),
-                    ),
+                secondary: vec![
+                    Label {
+                        span: lhs_span,
+                        msg: format!("left-hand side has type '{}'", lhs_type.display(),),
+                        paranthesise: true,
+                    },
+                    Label {
+                        span: rhs_span,
+                        msg: format!("right-hand side has type '{}'", rhs_type.display(),),
+                        paranthesise: true,
+                    },
                 ],
+
+                notes: vec![],
             });
         }
 
-        Ok(())
+        Ok(BinaryAnnotation {
+            lhs,
+            rhs,
+            op,
+            span,
+            expr_type,
+        })
     }
 
-    fn visit_statement(&mut self, node: &'a Box<AstNode>) -> Result<(), Diagnostic> {
-        match &node.kind {
-            AstNodeKind::VarDecl(decl) => self.visit_var_declare(decl, node.span)?,
-            AstNodeKind::VarAssign(assign) => self.visit_var_assign(assign)?,
-            AstNodeKind::Identifier => {
-                let _ = self.visit_identifier(node.span)?;
-            }
-            _ => unreachable!(),
+    pub fn annotate_unary_expression(
+        &mut self,
+        expr: UnaryExpr,
+        span: Span,
+    ) -> Result<UnaryAnnotation, Diagnostic> {
+        let operand_span = expr.operand.span;
+
+        let mut operand = self.annotate_expression(expr.operand)?;
+        let op = UnaryOpAnnotation {
+            operator: expr.op,
+            span: expr.op_span,
         };
 
-        Ok(())
-    }
+        let expr_type;
 
-    fn visit_node(&mut self, node: &'a Box<AstNode>) -> Result<(), Diagnostic> {
-        match &node.kind {
-            AstNodeKind::Statements(statements) => {
-                for stmt in statements.stmts.iter() {
-                    self.visit_statement(stmt)?;
-                }
-            }
+        let operand_type = operand.get_type();
 
-            kind => println!("Visit for {kind:?} not implemented!"),
+        if let Some(t) = op.get_result_type(operand_type) {
+            expr_type = t;
         }
+        // try cast
+        else if let Some(t) = op.try_cast(operand_type) {
+            let (target_type, evaled_type) = t;
+            operand = self.annotate_cast(operand_type, target_type, operand);
+            expr_type = evaled_type
+        }
+        // bad operation
+        else {
+            return Err(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::UnsupportedOperator,
 
-        Ok(())
+                msg: format!(
+                    "cannot apply operator '{}' to value of type '{}'",
+                    op.operator,
+                    operand_type.display(),
+                ),
+
+                primary: Label {
+                    span: op.span,
+                    msg: format!(
+                        "'{}' is not defined for '{}'",
+                        op.operator,
+                        operand_type.display(),
+                    ),
+                    paranthesise: false,
+                },
+
+                secondary: vec![Label {
+                    span: operand_span,
+                    msg: format!("operand has type '{}'", operand_type.display(),),
+                    paranthesise: true,
+                }],
+
+                notes: vec![],
+            });
+        }
+        Ok(UnaryAnnotation {
+            op,
+            operand,
+            span,
+            expr_type,
+        })
     }
 
-    pub fn build_table(&mut self) -> Result<(), Diagnostic> {
-        self.visit_node(self.ast)
+    pub fn annotate_atom(&mut self, atom: Box<AstNode>) -> Result<AtomAnnotation, Diagnostic> {
+        let span = atom.span;
+
+        let atom = match atom.kind {
+            AstNodeKind::Integer(expr) => {
+                AtomAnnotation::Integer(self.annotate_integer(expr, span)?)
+            }
+            AstNodeKind::Float(expr) => AtomAnnotation::Float(self.annotate_float(expr, span)?),
+            _ => panic!("atom visit not implemented"),
+        };
+
+        Ok(atom)
+    }
+
+    pub fn annotate_integer(
+        &mut self,
+        expr: IntegerExpr,
+        span: Span,
+    ) -> Result<IntegerAnnotation, Diagnostic> {
+        Ok(IntegerAnnotation {
+            value: expr.value,
+            span,
+            atom_type: Type::Integer,
+        })
+    }
+
+    pub fn annotate_float(
+        &mut self,
+        expr: FloatExpr,
+        span: Span,
+    ) -> Result<FloatAnnotation, Diagnostic> {
+        Ok(FloatAnnotation {
+            value: expr.value,
+            span,
+            atom_type: Type::Float,
+        })
+    }
+
+    // pub fn annotate_identifier(&mut self) -> Result<IdentifierAnnotation, Diagnostic> {}
+
+    pub fn create_annotated_tree(
+        &mut self,
+        ast: Box<AstNode>,
+    ) -> Result<AnnotatedTree, Diagnostic> {
+        let kind = ast.kind;
+
+        match kind {
+            AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
+            _ => panic!("Grammar enforces that the topmost node must be a statements node"),
+        }
     }
 }
