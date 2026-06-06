@@ -15,6 +15,7 @@ pub enum DiagnosticClass {
     ExpectedExpression,
     UnexpectedToken,
     InvalidLayout,
+    InvalidTypeExpression,
 
     // semantic
     UndefinedIdentifier,
@@ -33,6 +34,7 @@ impl DiagnosticClass {
             Self::ExpectedExpression => "E102",
             Self::UnexpectedToken => "E103",
             Self::InvalidLayout => "E104",
+            Self::InvalidTypeExpression => "E105",
 
             Self::UndefinedIdentifier => "E201",
             Self::TypeMismatch => "E202",
