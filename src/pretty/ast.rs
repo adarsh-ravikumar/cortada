@@ -63,6 +63,8 @@ impl AstPrinter {
                 Style::RESET
             ),
 
+            AstNodeKind::Null => println!("{leader}{}Null{}", Style::CYAN, Style::RESET,),
+
             AstNodeKind::Binary(expr) => {
                 println!(
                     "{leader}{}{}Binary{}({}{}{}{}{}){}",
@@ -261,12 +263,8 @@ impl AstPrinter {
                     Style::CYAN
                 );
 
-                if let Some(v) = &stmt.value {
-                    print!("{}\n", Style::RESET);
-                    Self::print_helper(&v, file, level + 2);
-                } else {
-                    println!(": {}null{}", Style::BRIGHT_YELLOW, Style::RESET);
-                }
+                print!("{}\n", Style::RESET);
+                Self::print_helper(&stmt.value, file, level + 2);
             }
 
             AstNodeKind::VarAssign(stmt) => {
@@ -296,12 +294,8 @@ impl AstPrinter {
                     Style::RESET
                 );
 
-                if let Some(v) = &stmt.value {
-                    print!("{}\n", Style::RESET);
-                    Self::print_helper(&v, file, level + 2);
-                } else {
-                    println!(": {}null{}", Style::BRIGHT_YELLOW, Style::RESET);
-                }
+                print!("{}\n", Style::RESET);
+                Self::print_helper(&stmt.value, file, level + 2);
             }
 
             AstNodeKind::Fn(stmt) => {
