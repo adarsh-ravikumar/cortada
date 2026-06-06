@@ -47,6 +47,9 @@ pub enum TokenKind {
     KwrdReturn,
     KwrdBreak,
     KwrdContinue,
+
+    KwrdInt,
+    KwrdFloat,
     KwrdNull,
 
     EOF,
@@ -68,6 +71,8 @@ impl TokenKind {
             "break" => Self::KwrdBreak,
             "continue" => Self::KwrdContinue,
             "null" => Self::KwrdNull,
+            "int" => Self::KwrdInt,
+            "float" => Self::KwrdFloat,
             _ => Self::Identifier,
         }
     }
@@ -134,6 +139,9 @@ impl TokenKind {
             TokenKind::KwrdBreak => "break",
             TokenKind::KwrdContinue => "continue",
             TokenKind::KwrdNull => "null",
+
+            TokenKind::KwrdInt => "int",
+            TokenKind::KwrdFloat => "float",
 
             TokenKind::EOF => "end of file",
         }
