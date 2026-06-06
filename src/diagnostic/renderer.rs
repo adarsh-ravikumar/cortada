@@ -57,48 +57,69 @@ impl DiagnosticRenderer {
 
         let mut res = String::new();
 
-        // we will first have to determine which line we are going to render (from source)
         let line = file.line(start_line).replace("\n", "");
 
-        // next, we start building the gutter
+        if label.paranthesise {
+            let (prefix, suffix) = line.split_at(start_col - 1);
+            let (to_wrap, suffix) = suffix.split_at(end_col - start_col);
+            res.push_str(&format!(
+                "{}{} {} │{}{} {}{}{}({}{}{}{}{}){}{}{}\n",
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                start_line,
+                Style::RESET,
+                Style::RESET_BOLD,
+                prefix,
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                Style::RESET,
+                Style::RESET_BOLD,
+                to_wrap,
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                Style::RESET,
+                Style::RESET_BOLD,
+                suffix
+            ));
+        } else {
+            res.push_str(&format!(
+                "{}{} {} │{}{} {}\n",
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                start_line,
+                Style::RESET,
+                Style::RESET_BOLD,
+                line,
+            ));
+        }
 
-        // // the first line is just there as a spacer
-        // res.push_str(&format!(
-        //     "{}{}   │{}{}\n",
-        //     Style::BOLD,
-        //     Style::BRIGHT_BLACK,
-        //     Style::RESET,
-        //     Style::RESET_BOLD,
-        // ));
-
-        // now comes the actual line
-        res.push_str(&format!(
-            "{}{} {} │{}{} {}\n",
-            Style::BOLD,
-            Style::BRIGHT_BLACK,
-            start_line,
-            Style::RESET,
-            Style::RESET_BOLD,
-            line,
-        ));
-
-        // followed by the highlight
-        // it will be hard-coded red for now cuz no warnings yet
         let num_spaces = label.span.start - file.line_starts[start_line - 1];
         let num_carets = usize::max(end_col - start_col, 1);
 
         let space = " ".repeat(num_spaces);
         let highlight = "^".repeat(num_carets);
 
-        res.push_str(&format!(
-            "{}{}   │ {space}{}{highlight} {}{}{}\n\n",
-            Style::BOLD,
-            Style::BRIGHT_BLACK,
-            Style::BRIGHT_RED,
-            label.msg,
-            Style::RESET,
-            Style::RESET_BOLD,
-        ));
+        if label.paranthesise {
+            res.push_str(&format!(
+                "{}{}   │ {space}{} {highlight} {}{}{}\n\n",
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                Style::BRIGHT_RED,
+                label.msg,
+                Style::RESET,
+                Style::RESET_BOLD,
+            ));
+        } else {
+            res.push_str(&format!(
+                "{}{}   │ {space}{}{highlight} {}{}{}\n\n",
+                Style::BOLD,
+                Style::BRIGHT_BLACK,
+                Style::BRIGHT_RED,
+                label.msg,
+                Style::RESET,
+                Style::RESET_BOLD,
+            ));
+        }
 
         res
     }
