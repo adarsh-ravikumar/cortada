@@ -65,6 +65,15 @@ impl AstPrinter {
 
             AstNodeKind::Null => println!("{leader}{}Null{}", Style::CYAN, Style::RESET,),
 
+            AstNodeKind::Type(type_expr) => println!(
+                "{leader}{}TypeExpression{}({}{}{})",
+                Style::CYAN,
+                Style::RESET,
+                Style::BRIGHT_YELLOW,
+                type_expr.ty.display(),
+                Style::RESET
+            ),
+
             AstNodeKind::Binary(expr) => {
                 println!(
                     "{leader}{}{}Binary{}({}{}{}{}{}){}",
@@ -245,13 +254,18 @@ impl AstPrinter {
                 );
 
                 if let Some(var_type) = &stmt.var_type {
+                    let var_type = match &var_type.kind {
+                        AstNodeKind::Type(type_expr) => type_expr.ty,
+                        _ => panic!("var type must be a type expression"),
+                    };
+
                     println!(
                         "{}{}├── {}Type: {}{}{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::CYAN,
                         Style::BRIGHT_YELLOW,
-                        file.view_span(*var_type),
+                        var_type.display(),
                         Style::RESET
                     );
                 }
@@ -350,14 +364,19 @@ impl AstPrinter {
                         Style::RESET
                     );
 
-                    if let Some(var_type) = &param.param_type {
+                    if let Some(param_type) = &param.param_type {
+                        let param_type = match &param_type.kind {
+                            AstNodeKind::Type(type_expr) => type_expr.ty,
+                            _ => panic!("var type must be a type expression"),
+                        };
+
                         println!(
                             "{}{}├── {}Type: {}{}{}",
                             Style::BRIGHT_BLACK,
                             Self::generate_leader(level + 3),
                             Style::CYAN,
                             Style::BRIGHT_YELLOW,
-                            file.view_span(*var_type),
+                            param_type.display(),
                             Style::RESET
                         );
                     }
