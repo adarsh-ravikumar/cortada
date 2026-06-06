@@ -1,11 +1,46 @@
 use crate::{
-    common::Span,
+    common::{Span, Type},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     lexer::TokenKind,
     parser::{BinaryOp, Parser, UnaryOp, node::AstNode, parser::ParserRes},
 };
 
 impl<'a> Parser<'a> {
+    pub(crate) fn parse_type_expression(&mut self) -> ParserRes {
+        let cur_tok = self.peek(0);
+
+        match cur_tok.kind {
+            TokenKind::KwrdInt => Ok(AstNode::type_expr(
+                Type::Integer,
+                cur_tok.span.start,
+                cur_tok.span.end,
+            )),
+
+            TokenKind::KwrdFloat => Ok(AstNode::type_expr(
+                Type::Integer,
+                cur_tok.span.start,
+                cur_tok.span.end,
+            )),
+
+            _ => Err(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::InvalidTypeExpression,
+
+                msg: "expected a type expression".into(),
+
+                primary: Label {
+                    span: cur_tok.span,
+                    msg: "expected a type expression here".into(),
+                    paranthesise: false,
+                },
+
+                secondary: vec![],
+
+                notes: vec!["a type expression may be a built-in type or an identifier".into()],
+            }),
+        }
+    }
+
     pub(crate) fn parse_expression(&mut self) -> ParserRes {
         self.parse_or_expression()
     }

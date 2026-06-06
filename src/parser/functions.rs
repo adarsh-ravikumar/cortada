@@ -67,15 +67,14 @@ impl<'a> Parser<'a> {
         self.expect_identifier("parameter name")?;
         let name = self.advance().span;
 
-        let mut param_type: Option<Span> = None;
+        let mut param_type: Option<Box<AstNode>> = None;
 
         let mut default_value: Option<Box<AstNode>> = None;
 
         if let Some(_) = self.matches(TokenKind::Colon) {
             self.advance();
 
-            self.expect_identifier("parameter type")?;
-            param_type = Some(self.advance().span);
+            param_type = Some(self.parse_type_expression()?);
         }
 
         if let Some(_) = self.matches(TokenKind::Equal) {

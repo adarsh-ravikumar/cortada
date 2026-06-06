@@ -1,5 +1,4 @@
 use crate::{
-    common::Span,
     lexer::TokenKind,
     parser::{Parser, node::AstNode, parser::ParserRes},
 };
@@ -24,10 +23,10 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Colon)?;
         self.advance();
 
-        let mut var_type: Option<Span> = None;
+        let mut var_type: Option<Box<AstNode>> = None;
 
-        if self.peek(0).kind == TokenKind::Identifier {
-            var_type = Some(self.advance().span);
+        if self.peek(0).kind != TokenKind::Equal {
+            var_type = Some(self.parse_type_expression()?);
         }
 
         self.expect(TokenKind::Equal)?;

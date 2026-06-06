@@ -1,4 +1,4 @@
-use crate::common::Span;
+use crate::common::{Span, Type};
 use crate::parser::{BinaryOp, UnaryOp};
 
 #[derive(Debug)]
@@ -9,7 +9,7 @@ pub struct Statements {
 #[derive(Debug)]
 pub struct VarDeclStatement {
     pub name: Span,
-    pub var_type: Option<Span>,
+    pub var_type: Option<Box<AstNode>>,
     pub value: Box<AstNode>,
     pub value_span: Span,
 }
@@ -32,7 +32,7 @@ pub struct FnStatement {
 #[derive(Debug)]
 pub struct Param {
     pub name: Span,
-    pub param_type: Option<Span>,
+    pub param_type: Option<Box<AstNode>>,
     pub default_value: Option<Box<AstNode>>,
 }
 
@@ -60,6 +60,11 @@ pub struct ElifBranch {
 #[derive(Debug)]
 pub struct ReturnStatement {
     pub expr: Option<Box<AstNode>>,
+}
+
+#[derive(Debug)]
+pub struct TypeExpr {
+    pub ty: Type,
 }
 
 #[derive(Debug)]
@@ -109,6 +114,7 @@ pub enum AstNodeKind {
     Break,
     Continue,
 
+    Type(TypeExpr),
     Binary(BinaryExpr),
     Unary(UnaryExpr),
     Call(CallExpr),
@@ -136,7 +142,7 @@ impl AstNode {
 
     pub fn var_decl(
         name: Span,
-        var_type: Option<Span>,
+        var_type: Option<Box<AstNode>>,
         value: Box<AstNode>,
         start: usize,
         end: usize,
@@ -235,6 +241,13 @@ impl AstNode {
     pub fn continue_stmt(start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Continue,
+            span: Span::new(start, end),
+        })
+    }
+
+    pub fn type_expr(ty: Type, start: usize, end: usize) -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::Type(TypeExpr { ty }),
             span: Span::new(start, end),
         })
     }
