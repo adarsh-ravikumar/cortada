@@ -158,6 +158,8 @@ impl<'a> Parser<'a> {
 
             TokenKind::Identifier => AstNode::identifier(next_tok.span.start, next_tok.span.end),
 
+            TokenKind::KwrdNull => AstNode::null(next_tok.span.start, next_tok.span.end),
+
             TokenKind::LeftParen => {
                 let open_paren_span = self.advance().span;
 

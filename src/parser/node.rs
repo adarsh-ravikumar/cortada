@@ -10,14 +10,14 @@ pub struct Statements {
 pub struct VarDeclStatement {
     pub name: Span,
     pub var_type: Option<Span>,
-    pub value: Option<Box<AstNode>>,
+    pub value: Box<AstNode>,
     pub value_span: Span,
 }
 
 #[derive(Debug)]
 pub struct VarAssignStatement {
     pub name: Span,
-    pub value: Option<Box<AstNode>>,
+    pub value: Box<AstNode>,
     pub value_span: Span,
 }
 
@@ -115,6 +115,7 @@ pub enum AstNodeKind {
 
     Integer(IntegerExpr),
     Float(FloatExpr),
+    Null,
     Identifier,
 }
 
@@ -136,8 +137,7 @@ impl AstNode {
     pub fn var_decl(
         name: Span,
         var_type: Option<Span>,
-        value: Option<Box<AstNode>>,
-        value_span: Span,
+        value: Box<AstNode>,
         start: usize,
         end: usize,
     ) -> Box<Self> {
@@ -145,25 +145,19 @@ impl AstNode {
             kind: AstNodeKind::VarDecl(VarDeclStatement {
                 name,
                 var_type,
-                value_span,
+                value_span: value.span,
                 value,
             }),
             span: Span::new(start, end),
         })
     }
 
-    pub fn var_assign(
-        name: Span,
-        value: Option<Box<AstNode>>,
-        value_span: Span,
-        start: usize,
-        end: usize,
-    ) -> Box<Self> {
+    pub fn var_assign(name: Span, value: Box<AstNode>, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::VarAssign(VarAssignStatement {
                 name,
+                value_span: value.span,
                 value,
-                value_span,
             }),
             span: Span::new(start, end),
         })
@@ -310,6 +304,13 @@ impl AstNode {
     pub fn identifier(start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Identifier,
+            span: Span::new(start, end),
+        })
+    }
+
+    pub fn null(start: usize, end: usize) -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::Null,
             span: Span::new(start, end),
         })
     }

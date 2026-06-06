@@ -30,22 +30,10 @@ impl<'a> Parser<'a> {
             var_type = Some(self.advance().span);
         }
 
-        let value: Option<Box<AstNode>>;
-
-        let value_span: Span;
-
         self.expect(TokenKind::Equal)?;
         self.advance();
 
-        if let Some(tok) = self.matches(TokenKind::KwrdNull) {
-            value = None;
-            value_span = tok.span;
-            self.advance();
-        } else {
-            let expr = self.parse_expression()?;
-            value_span = expr.span;
-            value = Some(expr);
-        }
+        let value = self.parse_expression()?;
 
         let start = name.start;
 
@@ -53,7 +41,6 @@ impl<'a> Parser<'a> {
             name,
             var_type,
             value,
-            value_span,
             start,
             self.peek(0).span.start,
         ))
@@ -66,25 +53,13 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Equal)?;
         self.advance();
 
-        let value_span: Span;
-
-        let value = if let Some(tok) = self.matches(TokenKind::KwrdNull) {
-            value_span = tok.span;
-            self.advance();
-
-            None
-        } else {
-            let expr = self.parse_expression()?;
-            value_span = expr.span;
-            Some(expr)
-        };
+        let value = self.parse_expression()?;
 
         let start = name.start;
 
         Ok(AstNode::var_assign(
             name,
             value,
-            value_span,
             start,
             self.peek(0).span.end,
         ))
