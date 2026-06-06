@@ -59,5 +59,6 @@ call_suffix  -> LPAREN (expression (COMMA expression)*)? COMMA? RPAREN
 atom       -> INTEGER
             | FLOAT
             | IDENTIFIER
+            | KWRD_NULL
             | LPAREN or_expression RPAREN
 
