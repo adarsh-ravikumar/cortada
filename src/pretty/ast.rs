@@ -110,6 +110,18 @@ impl AstPrinter {
                 Self::print_helper(&expr.operand, file, level + 1);
             }
 
+            AstNodeKind::Program(program) => {
+                println!(
+                    "{leader}{}{}Program{}{}",
+                    Style::BOLD,
+                    Style::MAGENTA,
+                    Style::RESET,
+                    Style::RESET_BOLD
+                );
+
+                Self::print_helper(&program.statements, file, level + 1);
+            }
+
             AstNodeKind::Statements(stmts) => {
                 println!(
                     "{leader}{}{}Statements{}{}",
