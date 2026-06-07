@@ -1,5 +1,5 @@
-use crate::common::{Span, Type};
-use crate::parser::{BinaryOp, UnaryOp, statements};
+use crate::common::Span;
+use crate::parser::{BinaryOp, UnaryOp};
 
 #[derive(Debug)]
 pub struct Program {
@@ -68,8 +68,19 @@ pub struct ReturnStatement {
 }
 
 #[derive(Debug)]
-pub struct TypeExpr {
-    pub ty: Type,
+pub enum TypePrimaryKind {
+    Integer,
+    Float,
+}
+
+#[derive(Debug)]
+pub struct TypePrimary {
+    pub kind: TypePrimaryKind,
+}
+
+#[derive(Debug)]
+pub struct TypeUnion {
+    pub variants: Vec<Box<AstNode>>,
 }
 
 #[derive(Debug)]
@@ -121,7 +132,9 @@ pub enum AstNodeKind {
     Break,
     Continue,
 
-    Type(TypeExpr),
+    TypeUnion(TypeUnion),
+    TypePrimary(TypePrimary),
+
     Binary(BinaryExpr),
     Unary(UnaryExpr),
     Call(CallExpr),
@@ -146,6 +159,7 @@ impl AstNode {
             span: Span::new(start, end),
         })
     }
+
     pub fn statements(stmts: Vec<Box<AstNode>>, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Statements(Statements { stmts }),
@@ -258,9 +272,16 @@ impl AstNode {
         })
     }
 
-    pub fn type_expr(ty: Type, start: usize, end: usize) -> Box<Self> {
+    pub fn type_primary(kind: TypePrimaryKind, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Type(TypeExpr { ty }),
+            kind: AstNodeKind::TypePrimary(TypePrimary { kind }),
+            span: Span::new(start, end),
+        })
+    }
+
+    pub fn type_union(ty: Vec<Box<AstNode>>, start: usize, end: usize) -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::TypeUnion(TypeUnion { variants: ty }),
             span: Span::new(start, end),
         })
     }
