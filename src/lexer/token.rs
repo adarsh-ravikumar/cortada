@@ -12,6 +12,7 @@ pub enum TokenKind {
     Float,
     Colon,
     Comma,
+    Pipe,
     LeftParen,
     RightParen,
     LeftBracket,
@@ -89,6 +90,7 @@ impl TokenKind {
 
             TokenKind::Colon => ":",
             TokenKind::Comma => ",",
+            TokenKind::Pipe => "|",
 
             TokenKind::LeftParen => "(",
             TokenKind::RightParen => ")",

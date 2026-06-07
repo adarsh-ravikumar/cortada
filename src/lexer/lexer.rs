@@ -179,6 +179,7 @@ impl<'a> Lexer<'a> {
         let tok_type = match ch {
             b':' => TokenKind::Colon,
             b',' => TokenKind::Comma,
+            b'|' => TokenKind::Pipe,
 
             b'(' => {
                 self.delimiter.push(Delimiter { ch, start });
