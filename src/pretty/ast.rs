@@ -1,6 +1,6 @@
 use crate::{
     common::IOFile,
-    parser::{AstNode, AstNodeKind},
+    parser::{AstNode, AstNodeKind, TypePrimaryKind},
     utils::Style,
 };
 
@@ -65,14 +65,27 @@ impl AstPrinter {
 
             AstNodeKind::Null => println!("{leader}{}Null{}", Style::CYAN, Style::RESET,),
 
-            AstNodeKind::Type(type_expr) => println!(
-                "{leader}{}TypeExpression{}({}{}{})",
-                Style::CYAN,
-                Style::RESET,
-                Style::BRIGHT_YELLOW,
-                type_expr.ty.display(),
-                Style::RESET
-            ),
+            AstNodeKind::TypeUnion(union) => {
+                if union.variants.len() == 1 {
+                    Self::print_helper(&union.variants.last().unwrap(), file, level);
+                }
+
+                println!("{leader}{}TypeUnion{}", Style::CYAN, Style::RESET);
+
+                for variant in union.variants.iter() {
+                    Self::print_helper(variant, file, level + 1);
+                }
+            }
+
+            AstNodeKind::TypePrimary(expr) => match expr.kind {
+                TypePrimaryKind::Integer => {
+                    println!("{leader}{}Integer{}", Style::CYAN, Style::RESET)
+                }
+
+                TypePrimaryKind::Float => {
+                    println!("{leader}{}Float{}", Style::CYAN, Style::RESET)
+                }
+            },
 
             AstNodeKind::Binary(expr) => {
                 println!(
@@ -266,20 +279,15 @@ impl AstPrinter {
                 );
 
                 if let Some(var_type) = &stmt.var_type {
-                    let var_type = match &var_type.kind {
-                        AstNodeKind::Type(type_expr) => type_expr.ty,
-                        _ => panic!("var type must be a type expression"),
-                    };
-
                     println!(
-                        "{}{}├── {}Type: {}{}{}",
+                        "{}{}├── {}Type{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::CYAN,
-                        Style::BRIGHT_YELLOW,
-                        var_type.display(),
                         Style::RESET
                     );
+
+                    Self::print_helper(&var_type, file, level + 2);
                 }
 
                 print!(
@@ -377,20 +385,15 @@ impl AstPrinter {
                     );
 
                     if let Some(param_type) = &param.param_type {
-                        let param_type = match &param_type.kind {
-                            AstNodeKind::Type(type_expr) => type_expr.ty,
-                            _ => panic!("var type must be a type expression"),
-                        };
-
                         println!(
-                            "{}{}├── {}Type: {}{}{}",
+                            "{}{}├── {}Type{}",
                             Style::BRIGHT_BLACK,
-                            Self::generate_leader(level + 3),
+                            Self::generate_leader(level + 1),
                             Style::CYAN,
-                            Style::BRIGHT_YELLOW,
-                            param_type.display(),
                             Style::RESET
                         );
+
+                        Self::print_helper(&param_type, file, level + 2);
                     }
 
                     if let Some(v) = &param.default_value {
