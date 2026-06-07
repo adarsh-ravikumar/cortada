@@ -1,5 +1,10 @@
 use crate::common::{Span, Type};
-use crate::parser::{BinaryOp, UnaryOp};
+use crate::parser::{BinaryOp, UnaryOp, statements};
+
+#[derive(Debug)]
+pub struct Program {
+    pub statements: Box<AstNode>,
+}
 
 #[derive(Debug)]
 pub struct Statements {
@@ -100,6 +105,8 @@ pub struct FloatExpr {
 
 #[derive(Debug)]
 pub enum AstNodeKind {
+    Program(Program),
+
     Statements(Statements),
 
     VarDecl(VarDeclStatement),
@@ -133,6 +140,12 @@ pub struct AstNode {
 }
 
 impl AstNode {
+    pub fn program(statements: Box<AstNode>, start: usize, end: usize) -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::Program(Program { statements }),
+            span: Span::new(start, end),
+        })
+    }
     pub fn statements(stmts: Vec<Box<AstNode>>, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Statements(Statements { stmts }),

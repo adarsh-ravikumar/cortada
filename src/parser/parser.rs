@@ -1,8 +1,10 @@
+use std::os::macos::raw::stat;
+
 use crate::{
     common::IOFile,
     diagnostic::Diagnostic,
     lexer::{Token, TokenKind},
-    parser::node::AstNode,
+    parser::{node::AstNode, statements},
 };
 
 pub struct Parser<'a> {
@@ -25,12 +27,15 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> ParserRes {
         self.skip_newlines();
 
-        let res = self.parse_statements()?;
+        let statements = self.parse_statements()?;
 
         self.skip_newlines();
 
         self.expect(TokenKind::EOF)?;
 
-        Ok(res)
+        let start = statements.span.start;
+        let end = statements.span.end;
+
+        Ok(AstNode::program(statements, start, end))
     }
 }
