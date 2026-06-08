@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, env::var};
+use std::collections::BTreeSet;
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Copy, Clone)]
 pub enum BuiltinType {

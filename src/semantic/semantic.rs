@@ -4,7 +4,7 @@ use crate::{
     common::{IOFile, Span},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     parser::{
-        AstNode, AstNodeKind, BinaryExpr, FloatExpr, IntegerExpr, Program, Statements, TypePrimary,
+        AstNode, AstNodeKind, AtomKind, BinaryExpr, Program, Statements, TypePrimary,
         TypePrimaryKind, TypeUnion, UnaryExpr, VarAssignStatement, VarDeclStatement,
     },
     semantic::{
@@ -73,12 +73,12 @@ impl<'a> SemanticAnalyzer<'a> {
             }
 
             AstNodeKind::VarAssign(assign) => {
-                let assign = self.annotate_var_assign(assign, statement.span)?;
+                let assign = self.annotate_var_assign(assign)?;
                 Ok(StatementAnnotation::VarAssign(assign))
             }
 
-            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier => {
-                let atom_annotated = self.annotate_atom(statement)?;
+            AstNodeKind::Atom(atom) => {
+                let atom_annotated = self.annotate_atom(atom, statement.span)?;
                 Ok(StatementAnnotation::Expression(ExpressionAnnotation::Atom(
                     atom_annotated,
                 )))
@@ -202,7 +202,6 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_var_assign(
         &mut self,
         assign: VarAssignStatement,
-        stmt_span: Span,
     ) -> Result<VarAssignAnnotation, Diagnostic> {
         let symbol_span = assign.name;
 
@@ -304,8 +303,8 @@ impl<'a> SemanticAnalyzer<'a> {
                 ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span)?)
             }
 
-            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier => {
-                let atom_annotated = self.annotate_atom(expression)?;
+            AstNodeKind::Atom(atom) => {
+                let atom_annotated = self.annotate_atom(atom, span)?;
                 ExpressionAnnotation::Atom(atom_annotated)
             }
 
@@ -425,7 +424,7 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<UnaryAnnotation, Diagnostic> {
         let operand_span = expr.operand.span;
 
-        let mut operand = self.annotate_expression(expr.operand)?;
+        let operand = self.annotate_expression(expr.operand)?;
         let op = UnaryOpAnnotation {
             operator: expr.op,
             span: expr.op_span,
@@ -482,45 +481,29 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    pub fn annotate_atom(&mut self, atom: Box<AstNode>) -> Result<AtomAnnotation, Diagnostic> {
-        let span = atom.span;
+    pub fn annotate_atom(
+        &mut self,
+        atom: AtomKind,
+        span: Span,
+    ) -> Result<AtomAnnotation, Diagnostic> {
+        let atom = match atom {
+            AtomKind::Integer(val) => AtomAnnotation::Integer(IntegerAnnotation {
+                value: val,
+                span,
+                atom_type: TypeKind::Builtin(BuiltinType::Integer),
+            }),
 
-        let atom = match atom.kind {
-            AstNodeKind::Integer(expr) => {
-                AtomAnnotation::Integer(self.annotate_integer(expr, span)?)
-            }
-            AstNodeKind::Float(expr) => AtomAnnotation::Float(self.annotate_float(expr, span)?),
+            AtomKind::Float(val) => AtomAnnotation::Float(FloatAnnotation {
+                value: val,
+                span,
+                atom_type: TypeKind::Builtin(BuiltinType::Integer),
+            }),
+
             _ => panic!("atom visit not implemented"),
         };
 
         Ok(atom)
     }
-
-    pub fn annotate_integer(
-        &mut self,
-        expr: IntegerExpr,
-        span: Span,
-    ) -> Result<IntegerAnnotation, Diagnostic> {
-        Ok(IntegerAnnotation {
-            value: expr.value,
-            span,
-            atom_type: TypeKind::Builtin(BuiltinType::Integer),
-        })
-    }
-
-    pub fn annotate_float(
-        &mut self,
-        expr: FloatExpr,
-        span: Span,
-    ) -> Result<FloatAnnotation, Diagnostic> {
-        Ok(FloatAnnotation {
-            value: expr.value,
-            span,
-            atom_type: TypeKind::Builtin(BuiltinType::Float),
-        })
-    }
-
-    // pub fn annotate_identifier(&mut self) -> Result<IdentifierAnnotation, Diagnostic> {}
 
     pub fn create_annotated_tree(
         &mut self,

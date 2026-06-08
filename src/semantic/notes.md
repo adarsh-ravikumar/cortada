@@ -14,16 +14,47 @@ to summarize, it is
 2 answers "if it exists, is it used correctly?"
 3 answers "does it exist, given the current scope?"
 
-the actual table, this is what i have in mind:
-for now, i am not tracking functions and stuff, only variables. so:
+# TODO
+Declarations
+-----------
+[x] Symbol Table
+[x] Binding Table
+[ ] Function Table
+[ ] Type Alias Table
 
-hashmap that maps
-symbol (string) -> vec<type, source span of where it is declared, source span of the symbol itself>
+Resolution
+----------
+[ ] Name Resolution
+[ ] Scope Resolution
+[ ] Binding shadowing
 
-why the two spans? idk i feel like i might need the symbol's span for diagnosis, but the entire decleration span i know i will use in diagnosis (err: declared here as ...)
+Types
+-----
+[x] Arithmetic Expressions
+[ ] Boolean Expressions
+[x] Assignment Checking
+[x] Implicit Cast Insertion
+[ ] Type Alias Resolution
+[ ] Function Call Checking
 
-it is a vector, because i allow shadowing, and again, for diagnosis purposes, it makes sense to maintain the history. 
+Control Flow
+------------
+[ ] Control Flow Annotation
 
-so i have the entire history like a stack, with the top being the latest, and the one i care about.
+Diagnostics
+-----------
+[x] Undefined Identifier
+[x] Type Mismatch
+[ ] Duplicate Declaration
+[ ] Invalid Shadowing (if applicable)
+[ ] Invalid Function Call
 
-does that all make sense?
+
+# order
+1) boolean expressions
+2) scope
+3) shadowing
+4) control flow
+5) functions 
+6) function calls
+7) type alias
