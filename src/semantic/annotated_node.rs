@@ -16,6 +16,7 @@ pub enum StatementAnnotation {
     VarDecl(VarDeclAnnotation),
     VarAssign(VarAssignAnnotation),
     If(IfAnnotation),
+    While(WhileAnnotation),
     Expression(ExpressionAnnotation),
 }
 
@@ -39,6 +40,12 @@ pub struct IfAnnotation {
 pub struct ElifAnnotation {
     pub condition: ExpressionAnnotation,
     pub body: AnnotatedStatements,
+}
+
+pub struct WhileAnnotation {
+    pub condition: ExpressionAnnotation,
+    pub body: AnnotatedStatements,
+    pub else_stmt: Option<AnnotatedStatements>,
 }
 
 pub enum ExpressionAnnotation {

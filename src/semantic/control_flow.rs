@@ -1,7 +1,9 @@
 use crate::{
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
-    parser::{AstNode, AstNodeKind, IfStatement},
-    semantic::{ElifAnnotation, ExpressionAnnotation, IfAnnotation, SemanticAnalyzer},
+    parser::{AstNode, AstNodeKind, IfStatement, WhileStatement},
+    semantic::{
+        ElifAnnotation, ExpressionAnnotation, IfAnnotation, SemanticAnalyzer, WhileAnnotation,
+    },
     symbol_table::{BuiltinType, ScopeTable, TypeKind},
 };
 
@@ -100,6 +102,46 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                 condition,
                 body: if_body,
                 elif_stmts: elifs,
+                else_stmt: None,
+            }),
+        }
+    }
+
+    pub fn annotate_while_statement(
+        &mut self,
+        statement: WhileStatement,
+        scope: &mut Box<ScopeTable<'a, 'scope>>,
+    ) -> Result<WhileAnnotation, Diagnostic> {
+        let condition = self.annotate_condition(statement.condition, scope)?;
+
+        let mut if_scope = ScopeTable::new(Some(scope), true);
+
+        let if_body = match statement.body.kind {
+            AstNodeKind::Statements(stmts) => self.annotate_statements(stmts, &mut if_scope)?,
+            _ => unreachable!(),
+        };
+
+        match statement.else_stmt {
+            Some(stmt) => {
+                let mut else_scope = ScopeTable::new(Some(scope), true);
+
+                let else_body = match stmt.kind {
+                    AstNodeKind::Statements(stmts) => {
+                        self.annotate_statements(stmts, &mut else_scope)?
+                    }
+                    _ => unreachable!(),
+                };
+
+                Ok(WhileAnnotation {
+                    condition,
+                    body: if_body,
+                    else_stmt: Some(else_body),
+                })
+            }
+
+            None => Ok(WhileAnnotation {
+                condition,
+                body: if_body,
                 else_stmt: None,
             }),
         }

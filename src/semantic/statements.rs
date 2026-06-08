@@ -70,6 +70,11 @@ where
                 Ok(StatementAnnotation::If(stmt))
             }
 
+            AstNodeKind::While(stmt) => {
+                let stmt = self.annotate_while_statement(stmt, scope)?;
+                Ok(StatementAnnotation::While(stmt))
+            }
+
             AstNodeKind::Atom(atom) => {
                 let atom_annotated = self.annotate_atom(atom, statement.span, scope)?;
                 Ok(StatementAnnotation::Expression(ExpressionAnnotation::Atom(
@@ -77,7 +82,7 @@ where
                 )))
             }
 
-            _ => panic!("not implemented"),
+            _ => unreachable!(),
         }
     }
 }
