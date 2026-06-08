@@ -8,7 +8,8 @@ use crate::{
         TypePrimaryKind, TypeUnion, UnaryExpr, VarAssignStatement, VarDeclStatement,
     },
     semantic::{
-        AnnotatedStatements, CastAnnotation, VarAssignAnnotation, VarDeclAnnotation,
+        AnnotatedStatements, BoolAnnotation, CastAnnotation, NullAnnotation, VarAssignAnnotation,
+        VarDeclAnnotation,
         annotated_node::{
             AnnotatedTree, AtomAnnotation, BinaryAnnotation, ExpressionAnnotation, FloatAnnotation,
             IntegerAnnotation, StatementAnnotation, UnaryAnnotation,
@@ -126,6 +127,7 @@ impl<'a> SemanticAnalyzer<'a> {
         match ty.kind {
             TypePrimaryKind::Integer => Ok(TypeKind::Builtin(BuiltinType::Integer)),
             TypePrimaryKind::Float => Ok(TypeKind::Builtin(BuiltinType::Float)),
+            TypePrimaryKind::Bool => Ok(TypeKind::Builtin(BuiltinType::Bool)),
         }
     }
 
@@ -150,7 +152,7 @@ impl<'a> SemanticAnalyzer<'a> {
             type_span = Some(ty.span);
 
             if !binding_type.accepts(value_type) {
-                if value_type.try_cast(&binding_type) {
+                if value_type.try_implicit_cast(&binding_type) {
                     value = self.annotate_cast(value_type.clone(), binding_type.clone(), value);
                 } else {
                     return Err(Diagnostic {
@@ -177,7 +179,7 @@ impl<'a> SemanticAnalyzer<'a> {
                                 symbol,
                                 binding_type.display()
                             ),
-                            paranthesise: false,
+                            paranthesise: true,
                         }],
 
                         notes: vec![],
@@ -236,7 +238,7 @@ impl<'a> SemanticAnalyzer<'a> {
         let binding_type = &binding.binding_type;
 
         if !binding_type.accepts(value_type) {
-            if value_type.try_cast(&binding_type) {
+            if value_type.try_implicit_cast(&binding_type) {
                 value = self.annotate_cast(value_type.clone(), binding_type.clone(), value);
             } else {
                 return Err(Diagnostic {
@@ -354,11 +356,7 @@ impl<'a> SemanticAnalyzer<'a> {
 
         let expr_type;
 
-        if let Some(t) = op.get_result_type(lhs_type, rhs_type) {
-            expr_type = t;
-        }
-        // try cast
-        else if let Some(res) = op.try_cast(lhs_type, rhs_type) {
+        if let Some(res) = op.get_result_type(lhs_type, rhs_type) {
             expr_type = res.clone();
 
             if lhs_type != &res {
@@ -383,7 +381,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 primary: Label {
                     span: op.span,
                     msg: format!(
-                        "'{}' is not defined for '{}' and '{}'",
+                        "'{}' is not defined for operands of type '{}' and '{}'",
                         op.operator,
                         lhs_type.display(),
                         rhs_type.display()
@@ -438,7 +436,7 @@ impl<'a> SemanticAnalyzer<'a> {
             expr_type = t;
         }
         // try cast
-        else if let Some(t) = op.try_cast(operand_type) {
+        else if let Some(t) = op.try_implicit_cast(operand_type) {
             // operand = self.annotate_cast(operand_type.clone(), target_type.clone(), operand);
             expr_type = t
         }
@@ -487,19 +485,30 @@ impl<'a> SemanticAnalyzer<'a> {
         span: Span,
     ) -> Result<AtomAnnotation, Diagnostic> {
         let atom = match atom {
-            AtomKind::Integer(val) => AtomAnnotation::Integer(IntegerAnnotation {
-                value: val,
+            AtomKind::Integer(value) => AtomAnnotation::Integer(IntegerAnnotation {
+                value,
                 span,
                 atom_type: TypeKind::Builtin(BuiltinType::Integer),
             }),
 
-            AtomKind::Float(val) => AtomAnnotation::Float(FloatAnnotation {
-                value: val,
+            AtomKind::Float(value) => AtomAnnotation::Float(FloatAnnotation {
+                value,
                 span,
-                atom_type: TypeKind::Builtin(BuiltinType::Integer),
+                atom_type: TypeKind::Builtin(BuiltinType::Float),
             }),
 
-            _ => panic!("atom visit not implemented"),
+            AtomKind::Bool(value) => AtomAnnotation::Bool(BoolAnnotation {
+                value,
+                span,
+                atom_type: TypeKind::Builtin(BuiltinType::Bool),
+            }),
+
+            AtomKind::Null => AtomAnnotation::Null(NullAnnotation {
+                span,
+                atom_type: TypeKind::Builtin(BuiltinType::Null),
+            }),
+
+            _ => panic!("unkown"),
         };
 
         Ok(atom)

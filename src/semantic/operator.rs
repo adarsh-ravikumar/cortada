@@ -10,47 +10,68 @@ pub struct BinaryOpAnnotation {
 }
 
 impl BinaryOpAnnotation {
-    pub fn get_result_type(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
-        match self.operator {
-            _ => {
-                if lhs == rhs {
-                    let result = lhs.clone();
-                    return Some(result);
-                }
-                None
-            }
+    pub fn common_numeric_type(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
+        println!("{} {}", lhs.display(), rhs.display());
+
+        let lhs_rank = lhs.rank()?;
+        let rhs_rank = rhs.rank()?;
+
+        println!("{lhs_rank} {rhs_rank}");
+
+        let (from, to) = if lhs_rank > rhs_rank {
+            (rhs, lhs)
+        } else if lhs_rank < rhs_rank {
+            (lhs, rhs)
+        } else {
+            return Some(lhs.clone());
+        };
+
+        match from.try_implicit_cast(to) {
+            true => Some(to.clone()),
+            false => None,
         }
     }
 
-    pub fn try_cast(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
+    pub fn get_result_type(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
         match self.operator {
             BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply => {
-                let lhs_rank = lhs.rank();
-                let rhs_rank = rhs.rank();
+                self.common_numeric_type(lhs, rhs)
+            }
 
-                let (from, to) = if lhs_rank > rhs_rank {
-                    (rhs, lhs)
-                } else {
-                    (lhs, rhs)
-                };
+            BinaryOp::LessThan
+            | BinaryOp::LessThanEqual
+            | BinaryOp::GreaterThan
+            | BinaryOp::GreaterThanEqual => {
+                self.common_numeric_type(lhs, rhs)?;
 
-                match from.try_cast(to) {
-                    true => Some(to.clone()),
-                    false => None,
-                }
+                Some(TypeKind::Builtin(BuiltinType::Bool))
             }
 
             BinaryOp::Divide => {
                 let float_type = TypeKind::Builtin(BuiltinType::Float);
-                if !lhs.try_cast(&float_type) {
+                if !lhs.try_implicit_cast(&float_type) {
                     return None;
                 }
 
-                if !rhs.try_cast(&float_type) {
+                if !rhs.try_implicit_cast(&float_type) {
                     return None;
                 }
 
                 Some(float_type)
+            }
+
+            BinaryOp::IsEqual | BinaryOp::NotEqual => {
+                let bool_type = TypeKind::Builtin(BuiltinType::Bool);
+
+                if lhs == rhs
+                    || self.common_numeric_type(lhs, rhs).is_some()
+                    || lhs.accepts(rhs)
+                    || rhs.accepts(lhs)
+                {
+                    return Some(bool_type);
+                }
+
+                None
             }
 
             _ => panic!("unimplemented"),
@@ -82,7 +103,7 @@ impl UnaryOpAnnotation {
         }
     }
 
-    pub fn try_cast(&self, _: &TypeKind) -> Option<TypeKind> {
+    pub fn try_implicit_cast(&self, _: &TypeKind) -> Option<TypeKind> {
         match self.operator {
             UnaryOp::Plus | UnaryOp::Minus => {
                 return None;

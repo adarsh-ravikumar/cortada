@@ -74,6 +74,8 @@ pub struct UnaryAnnotation {
 pub enum AtomAnnotation {
     Integer(IntegerAnnotation),
     Float(FloatAnnotation),
+    Bool(BoolAnnotation),
+    Null(NullAnnotation),
     Identifier(IdentifierAnnotation),
 }
 
@@ -82,6 +84,8 @@ impl AtomAnnotation {
         match self {
             Self::Integer(atom) => &atom.atom_type,
             Self::Float(atom) => &atom.atom_type,
+            Self::Bool(atom) => &atom.atom_type,
+            Self::Null(atom) => &atom.atom_type,
             _ => panic!("not implemented"),
         }
     }
@@ -95,6 +99,17 @@ pub struct IntegerAnnotation {
 
 pub struct FloatAnnotation {
     pub value: f64,
+    pub span: Span,
+    pub atom_type: TypeKind,
+}
+
+pub struct BoolAnnotation {
+    pub value: bool,
+    pub span: Span,
+    pub atom_type: TypeKind,
+}
+
+pub struct NullAnnotation {
     pub span: Span,
     pub atom_type: TypeKind,
 }
