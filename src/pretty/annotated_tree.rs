@@ -2,8 +2,9 @@ use crate::{
     parser::AstNodeKind,
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
-        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IntegerAnnotation,
-        StatementAnnotation, UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
+        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IdentifierAnnotation,
+        IntegerAnnotation, StatementAnnotation, UnaryAnnotation, VarAssignAnnotation,
+        VarDeclAnnotation,
     },
     symbol_table::SymbolTable,
     utils::Style,
@@ -61,11 +62,18 @@ impl<'a> AnnotatedTreePrinter<'a> {
     fn print_var_decl(&self, decl: &VarDeclAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
-        println!("{leader}{}VarDecl{}", Style::BLUE, Style::RESET);
+        println!(
+            "{leader}{}VarDecl{} {}[id: {}]{}",
+            Style::BLUE,
+            Style::RESET,
+            Style::DIM,
+            decl.entry,
+            Style::RESET_DIM
+        );
 
         let leader = Self::generate_field_leader(level + 1, false);
 
-        let entry = self.symbol_table.get_binding_from_id(&decl.entry).unwrap();
+        let entry = self.symbol_table.get_binding(&decl.entry).unwrap();
 
         let name = self.symbol_table.get_symbol(entry.symbol_span);
 
@@ -91,13 +99,20 @@ impl<'a> AnnotatedTreePrinter<'a> {
     fn print_var_assign(&self, assign: &VarAssignAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
-        println!("{leader}{}VarDecl{}", Style::BLUE, Style::RESET);
+        println!(
+            "{leader}{}VarAssign{} {}[id: {}]{}",
+            Style::BLUE,
+            Style::RESET,
+            Style::DIM,
+            assign.entry_reference,
+            Style::RESET_DIM
+        );
 
         let leader = Self::generate_field_leader(level + 1, false);
 
         let entry = self
             .symbol_table
-            .get_binding_from_id(&assign.entry_reference)
+            .get_binding(&assign.entry_reference)
             .unwrap();
 
         let name = self.symbol_table.get_symbol(entry.symbol_span);
@@ -207,7 +222,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
             AtomAnnotation::Null(_) => self.print_null(level, is_terminal),
 
-            _ => panic!("unknown"),
+            AtomAnnotation::Identifier(ident) => self.print_identifier(ident, level, is_terminal),
         }
     }
 
@@ -271,11 +286,33 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
+    fn print_identifier(&self, ident: &IdentifierAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!(
+            "{leader}{}Atom{}({}{}{} {}[id: {}]{}) : {}{}{}{}{} ",
+            Style::CYAN,
+            Style::RESET,
+            Style::BRIGHT_YELLOW,
+            self.symbol_table.get_symbol(ident.span),
+            Style::RESET,
+            Style::DIM,
+            ident.entry,
+            Style::RESET_DIM,
+            Style::BOLD,
+            Style::BRIGHT_BLUE,
+            ident.atom_type.display(),
+            Style::RESET,
+            Style::RESET_BOLD,
+        );
+    }
+
     fn print_null(&self, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
         println!("{leader}{}Null{}", Style::CYAN, Style::RESET,);
     }
+
     pub fn print_statements(&self, stmts: &AnnotatedStatements) {
         println!(
             "{}{}Statements{}{}",
