@@ -1,9 +1,9 @@
 use crate::{
     parser::AstNodeKind,
     semantic::{
-        AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, CastAnnotation,
-        ExpressionAnnotation, FloatAnnotation, IntegerAnnotation, StatementAnnotation,
-        UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
+        AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
+        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IntegerAnnotation,
+        StatementAnnotation, UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
     },
     symbol_table::SymbolTable,
     utils::Style,
@@ -203,7 +203,11 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
             AtomAnnotation::Float(atom) => self.print_float(atom, level, is_terminal),
 
-            _ => panic!("unimplemented"),
+            AtomAnnotation::Bool(atom) => self.print_bool(atom, level, is_terminal),
+
+            AtomAnnotation::Null(_) => self.print_null(level, is_terminal),
+
+            _ => panic!("unknown"),
         }
     }
 
@@ -249,6 +253,29 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
+    fn print_bool(&self, bool: &BoolAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!(
+            "{leader}{}Bool{}({}{}{}) : {}{}{}{}{}",
+            Style::CYAN,
+            Style::RESET,
+            Style::BRIGHT_YELLOW,
+            bool.value,
+            Style::RESET,
+            Style::BOLD,
+            Style::BRIGHT_BLUE,
+            bool.atom_type.display(),
+            Style::RESET,
+            Style::RESET_BOLD
+        );
+    }
+
+    fn print_null(&self, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!("{leader}{}Null{}", Style::CYAN, Style::RESET,);
+    }
     pub fn print_statements(&self, stmts: &AnnotatedStatements) {
         println!(
             "{}{}Statements{}{}",

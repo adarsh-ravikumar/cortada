@@ -52,6 +52,15 @@ impl AstPrinter {
                     Style::RESET
                 ),
 
+                AtomKind::Bool(val) => println!(
+                    "{leader}{}Bool{}({}{}{})",
+                    Style::CYAN,
+                    Style::RESET,
+                    Style::BRIGHT_YELLOW,
+                    val,
+                    Style::RESET
+                ),
+
                 AtomKind::Identifier => println!(
                     "{leader}{}Identifier{}({}{}{})",
                     Style::CYAN,
@@ -83,6 +92,10 @@ impl AstPrinter {
 
                 TypePrimaryKind::Float => {
                     println!("{leader}{}Float{}", Style::CYAN, Style::RESET)
+                }
+
+                TypePrimaryKind::Bool => {
+                    println!("{leader}{}Bool{}", Style::CYAN, Style::RESET)
                 }
             },
 
