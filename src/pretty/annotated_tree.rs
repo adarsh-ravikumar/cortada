@@ -2,7 +2,7 @@ use crate::{
     parser::AstNodeKind,
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
-        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IdentifierAnnotation,
+        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IdentifierAnnotation, IfAnnotation,
         IntegerAnnotation, StatementAnnotation, UnaryAnnotation, VarAssignAnnotation,
         VarDeclAnnotation,
     },
@@ -56,6 +56,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
             StatementAnnotation::VarAssign(assign) => {
                 self.print_var_assign(assign, level, is_terminal)
             }
+
+            StatementAnnotation::If(if_stmt) => self.print_if(if_stmt, level, is_terminal),
         }
     }
 
@@ -129,6 +131,79 @@ impl<'a> AnnotatedTreePrinter<'a> {
         self.print_expression(&assign.value, level + 2, is_terminal);
     }
 
+    fn print_if(&self, stmt: &IfAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!(
+            "{leader}{}{}If{}{}",
+            Style::BOLD,
+            Style::MAGENTA,
+            Style::RESET,
+            Style::RESET_BOLD
+        );
+
+        // condition
+        println!(
+            "{}{}{}condition",
+            Style::BRIGHT_BLACK,
+            Self::generate_field_leader(level + 1, false),
+            Style::MAGENTA,
+        );
+
+        self.print_expression(&stmt.condition, level + 2, false);
+
+        // body
+        self.print_statements(&stmt.body, level + 1, false);
+
+        // elif
+        let tree_ch = if stmt.else_stmt.is_some() {
+            "├──"
+        } else {
+            "└──"
+        };
+
+        if !stmt.elif_stmts.is_empty() {
+            println!(
+                "{}{}{tree_ch} {}{}Elif{}{}",
+                Style::BRIGHT_BLACK,
+                Self::generate_field_leader(level + 1, false),
+                Style::BOLD,
+                Style::MAGENTA,
+                Style::RESET,
+                Style::RESET_BOLD
+            );
+        }
+
+        for elif_stmt in stmt.elif_stmts.iter() {
+            // condition
+            println!(
+                "{}{}├── {}condition",
+                Style::BRIGHT_BLACK,
+                Self::generate_field_leader(level + 2, false),
+                Style::MAGENTA,
+            );
+
+            self.print_expression(&elif_stmt.condition, level + 3, false);
+
+            self.print_statements(&elif_stmt.body, level + 2, false);
+        }
+
+        // else
+        if stmt.else_stmt.is_some() {
+            println!(
+                "{}{}└── {}{}Else{}{}",
+                Style::BRIGHT_BLACK,
+                Self::generate_field_leader(level + 1, is_terminal),
+                Style::BOLD,
+                Style::MAGENTA,
+                Style::RESET,
+                Style::RESET_BOLD
+            );
+
+            self.print_statements(&stmt.else_stmt.as_ref().unwrap(), level + 2, false);
+        }
+    }
+
     fn print_expression(&self, expr: &ExpressionAnnotation, level: usize, is_terminal: bool) {
         match expr {
             ExpressionAnnotation::Binary(expr) => {
@@ -140,7 +215,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
             }
 
             ExpressionAnnotation::Atom(atom) => {
-                self.print_atom(atom, level, is_terminal);
+                self.print_atom(atom, level);
             }
 
             ExpressionAnnotation::Cast(cast) => {
@@ -212,22 +287,22 @@ impl<'a> AnnotatedTreePrinter<'a> {
         self.print_expression(&cast.expr, level + 1, is_terminal);
     }
 
-    fn print_atom(&self, expr: &AtomAnnotation, level: usize, is_terminal: bool) {
+    fn print_atom(&self, expr: &AtomAnnotation, level: usize) {
         match expr {
-            AtomAnnotation::Integer(atom) => self.print_integer(atom, level, is_terminal),
+            AtomAnnotation::Integer(atom) => self.print_integer(atom, level),
 
-            AtomAnnotation::Float(atom) => self.print_float(atom, level, is_terminal),
+            AtomAnnotation::Float(atom) => self.print_float(atom, level),
 
-            AtomAnnotation::Bool(atom) => self.print_bool(atom, level, is_terminal),
+            AtomAnnotation::Bool(atom) => self.print_bool(atom, level),
 
-            AtomAnnotation::Null(_) => self.print_null(level, is_terminal),
+            AtomAnnotation::Null(_) => self.print_null(level),
 
-            AtomAnnotation::Identifier(ident) => self.print_identifier(ident, level, is_terminal),
+            AtomAnnotation::Identifier(ident) => self.print_identifier(ident, level),
         }
     }
 
-    fn print_integer(&self, integer: &IntegerAnnotation, level: usize, is_terminal: bool) {
-        let leader = Self::generate_field_leader(level, is_terminal);
+    fn print_integer(&self, integer: &IntegerAnnotation, level: usize) {
+        let leader = Self::generate_field_leader(level, true);
 
         println!(
             "{leader}{}Atom{}({}{}{}) : {}{}{}{}{}",
@@ -244,8 +319,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
-    fn print_float(&self, float: &FloatAnnotation, level: usize, is_terminal: bool) {
-        let leader = Self::generate_field_leader(level, is_terminal);
+    fn print_float(&self, float: &FloatAnnotation, level: usize) {
+        let leader = Self::generate_field_leader(level, true);
 
         let value = if float.value.fract() == 0.0 {
             format!("{:.1}", float.value)
@@ -268,8 +343,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
-    fn print_bool(&self, bool: &BoolAnnotation, level: usize, is_terminal: bool) {
-        let leader = Self::generate_field_leader(level, is_terminal);
+    fn print_bool(&self, bool: &BoolAnnotation, level: usize) {
+        let leader = Self::generate_field_leader(level, true);
 
         println!(
             "{leader}{}Bool{}({}{}{}) : {}{}{}{}{}",
@@ -286,8 +361,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
-    fn print_identifier(&self, ident: &IdentifierAnnotation, level: usize, is_terminal: bool) {
-        let leader = Self::generate_field_leader(level, is_terminal);
+    fn print_identifier(&self, ident: &IdentifierAnnotation, level: usize) {
+        let leader = Self::generate_field_leader(level, true);
 
         println!(
             "{leader}{}Atom{}({}{}{} {}[id: {}]{}) : {}{}{}{}{} ",
@@ -307,15 +382,16 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
     }
 
-    fn print_null(&self, level: usize, is_terminal: bool) {
-        let leader = Self::generate_field_leader(level, is_terminal);
+    fn print_null(&self, level: usize) {
+        let leader = Self::generate_field_leader(level, true);
 
         println!("{leader}{}Null{}", Style::CYAN, Style::RESET,);
     }
 
-    pub fn print_statements(&self, stmts: &AnnotatedStatements) {
+    pub fn print_statements(&self, stmts: &AnnotatedStatements, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
         println!(
-            "{}{}Statements{}{}",
+            "{leader}{}{}Statements{}{}",
             Style::BOLD,
             Style::MAGENTA,
             Style::RESET,
@@ -323,7 +399,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
         );
 
         for statement in stmts.statements.iter() {
-            self.print_statement(statement, 1, false);
+            self.print_statement(statement, level + 1, is_terminal);
         }
     }
 
