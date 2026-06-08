@@ -41,10 +41,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
     }
 
     fn is_terminal(kind: &AstNodeKind) -> bool {
-        matches!(
-            kind,
-            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier
-        )
+        matches!(kind, AstNodeKind::Atom(_))
     }
 
     fn print_statement(&self, stmt: &StatementAnnotation, level: usize, is_terminal: bool) {
@@ -58,8 +55,6 @@ impl<'a> AnnotatedTreePrinter<'a> {
             StatementAnnotation::VarAssign(assign) => {
                 self.print_var_assign(assign, level, is_terminal)
             }
-
-            _ => panic!("not implemented"),
         }
     }
 

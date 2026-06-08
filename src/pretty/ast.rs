@@ -1,6 +1,6 @@
 use crate::{
     common::IOFile,
-    parser::{AstNode, AstNodeKind, TypePrimaryKind},
+    parser::{AstNode, AstNodeKind, AtomKind, TypePrimaryKind},
     utils::Style,
 };
 
@@ -12,10 +12,7 @@ impl AstPrinter {
     }
 
     fn is_terminal(kind: &AstNodeKind) -> bool {
-        matches!(
-            kind,
-            AstNodeKind::Integer(_) | AstNodeKind::Float(_) | AstNodeKind::Identifier
-        )
+        matches!(kind, AstNodeKind::Atom(_))
     }
 
     fn print_helper(ast: &Box<AstNode>, file: &IOFile, level: usize) {
@@ -36,34 +33,36 @@ impl AstPrinter {
         };
 
         match &ast.kind {
-            AstNodeKind::Integer(expr) => println!(
-                "{leader}{}Integer{}({}{}{})",
-                Style::CYAN,
-                Style::RESET,
-                Style::BRIGHT_YELLOW,
-                expr.value,
-                Style::RESET
-            ),
+            AstNodeKind::Atom(atom) => match atom {
+                AtomKind::Integer(val) => println!(
+                    "{leader}{}Integer{}({}{}{})",
+                    Style::CYAN,
+                    Style::RESET,
+                    Style::BRIGHT_YELLOW,
+                    val,
+                    Style::RESET
+                ),
 
-            AstNodeKind::Float(expr) => println!(
-                "{leader}{}Float{}({}{}{})",
-                Style::CYAN,
-                Style::RESET,
-                Style::BRIGHT_YELLOW,
-                expr.value,
-                Style::RESET
-            ),
+                AtomKind::Float(val) => println!(
+                    "{leader}{}Float{}({}{}{})",
+                    Style::CYAN,
+                    Style::RESET,
+                    Style::BRIGHT_YELLOW,
+                    val,
+                    Style::RESET
+                ),
 
-            AstNodeKind::Identifier => println!(
-                "{leader}{}Identifier{}({}{}{})",
-                Style::CYAN,
-                Style::RESET,
-                Style::BRIGHT_YELLOW,
-                file.view_span(ast.span),
-                Style::RESET
-            ),
+                AtomKind::Identifier => println!(
+                    "{leader}{}Identifier{}({}{}{})",
+                    Style::CYAN,
+                    Style::RESET,
+                    Style::BRIGHT_YELLOW,
+                    file.view_span(ast.span),
+                    Style::RESET
+                ),
 
-            AstNodeKind::Null => println!("{leader}{}Null{}", Style::CYAN, Style::RESET,),
+                AtomKind::Null => println!("{leader}{}Null{}", Style::CYAN, Style::RESET,),
+            },
 
             AstNodeKind::TypeUnion(union) => {
                 if union.variants.len() == 1 {
