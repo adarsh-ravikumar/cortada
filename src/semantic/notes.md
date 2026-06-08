@@ -31,9 +31,10 @@ Resolution
 Types
 -----
 [x] Arithmetic Expressions
-[ ] Boolean Expressions
+[x] Boolean Expressions
 [x] Assignment Checking
 [x] Implicit Cast Insertion
+[ ] Identifier usage
 [ ] Type Alias Resolution
 [ ] Function Call Checking
 
@@ -45,13 +46,12 @@ Diagnostics
 -----------
 [x] Undefined Identifier
 [x] Type Mismatch
-[ ] Duplicate Declaration
 [ ] Invalid Shadowing (if applicable)
 [ ] Invalid Function Call
 
 
 # order
-1) boolean expressions
+1) identifiers
 2) scope
 3) shadowing
 4) control flow

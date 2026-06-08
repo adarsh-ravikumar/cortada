@@ -116,5 +116,6 @@ pub struct NullAnnotation {
 
 pub struct IdentifierAnnotation {
     pub entry: usize,
+    pub atom_type: TypeKind,
     pub span: Span,
 }
