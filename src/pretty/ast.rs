@@ -328,7 +328,6 @@ impl AstPrinter {
                     Style::RESET
                 );
 
-                print!("{}\n", Style::RESET);
                 Self::print_helper(&stmt.value, file, level + 2);
             }
 
