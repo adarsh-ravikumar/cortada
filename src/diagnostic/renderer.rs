@@ -93,6 +93,8 @@ impl DiagnosticRenderer {
             ));
         }
 
+        let line_num_len = Self::num_len(start_line);
+
         let num_spaces = label.span.start - file.line_starts[start_line - 1];
         let num_carets = usize::max(end_col - start_col, 1);
 
@@ -101,7 +103,8 @@ impl DiagnosticRenderer {
 
         if label.paranthesise {
             res.push_str(&format!(
-                "{}{}   │ {space}{} {highlight} {}{}{}\n\n",
+                "{}{}{}│ {space}{} {highlight} {}{}{}\n\n",
+                " ".repeat(line_num_len),
                 Style::BOLD,
                 Style::BRIGHT_BLACK,
                 Style::BRIGHT_RED,
@@ -111,7 +114,8 @@ impl DiagnosticRenderer {
             ));
         } else {
             res.push_str(&format!(
-                "{}{}   │ {space}{}{highlight} {}{}{}\n\n",
+                "{}{}{} │ {space}{}{highlight} {}{}{}\n\n",
+                " ".repeat(line_num_len),
                 Style::BOLD,
                 Style::BRIGHT_BLACK,
                 Style::BRIGHT_RED,
@@ -139,6 +143,22 @@ impl DiagnosticRenderer {
         }
 
         res
+    }
+
+    fn num_len(num: usize) -> usize {
+        let mut num = num;
+        let mut len = 1;
+
+        loop {
+            num /= 10;
+            len += 1;
+
+            if num == 0 {
+                break;
+            }
+        }
+
+        len
     }
 
     pub fn render(diag: Diagnostic, file: &IOFile) -> String {
