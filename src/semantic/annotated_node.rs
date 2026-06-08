@@ -1,5 +1,3 @@
-use core::panic;
-
 use crate::{
     common::Span,
     semantic::operator::{BinaryOpAnnotation, UnaryOpAnnotation},
@@ -17,6 +15,7 @@ pub struct AnnotatedStatements {
 pub enum StatementAnnotation {
     VarDecl(VarDeclAnnotation),
     VarAssign(VarAssignAnnotation),
+    If(IfAnnotation),
     Expression(ExpressionAnnotation),
 }
 
@@ -28,6 +27,18 @@ pub struct VarDeclAnnotation {
 pub struct VarAssignAnnotation {
     pub entry_reference: BindingId,
     pub value: ExpressionAnnotation,
+}
+
+pub struct IfAnnotation {
+    pub condition: ExpressionAnnotation,
+    pub body: AnnotatedStatements,
+    pub elif_stmts: Vec<ElifAnnotation>,
+    pub else_stmt: Option<AnnotatedStatements>,
+}
+
+pub struct ElifAnnotation {
+    pub condition: ExpressionAnnotation,
+    pub body: AnnotatedStatements,
 }
 
 pub enum ExpressionAnnotation {
@@ -86,7 +97,7 @@ impl AtomAnnotation {
             Self::Float(atom) => &atom.atom_type,
             Self::Bool(atom) => &atom.atom_type,
             Self::Null(atom) => &atom.atom_type,
-            _ => panic!("not implemented"),
+            Self::Identifier(atom) => &atom.atom_type,
         }
     }
 }

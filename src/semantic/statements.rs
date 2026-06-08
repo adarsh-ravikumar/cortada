@@ -8,12 +8,15 @@ use crate::{
     symbol_table::ScopeTable,
 };
 
-impl<'a> SemanticAnalyzer<'a> {
+impl<'a, 'scope> SemanticAnalyzer<'a>
+where
+    'a: 'scope,
+{
     pub(crate) fn annotate_program(
         &mut self,
         program: Program,
     ) -> Result<AnnotatedTree, Diagnostic> {
-        let mut scope = ScopeTable::new(None, false);
+        let mut scope: Box<ScopeTable<'a, 'scope>> = ScopeTable::new(None, false);
 
         // stmts
         let statements = match program.statements.kind {
@@ -27,7 +30,7 @@ impl<'a> SemanticAnalyzer<'a> {
     pub(crate) fn annotate_statements(
         &mut self,
         statements: Statements,
-        scope: &mut ScopeTable<'a>,
+        scope: &mut Box<ScopeTable<'a, 'scope>>,
     ) -> Result<AnnotatedStatements, Diagnostic> {
         let stmts = statements.stmts;
         let mut annotated: Vec<StatementAnnotation> = Vec::new();
@@ -44,7 +47,7 @@ impl<'a> SemanticAnalyzer<'a> {
     pub(crate) fn annotate_statement(
         &mut self,
         statement: Box<AstNode>,
-        scope: &mut ScopeTable<'a>,
+        scope: &mut Box<ScopeTable<'a, 'scope>>,
     ) -> Result<StatementAnnotation, Diagnostic> {
         match statement.kind {
             AstNodeKind::Binary(_) | AstNodeKind::Unary(_) => {
@@ -60,6 +63,11 @@ impl<'a> SemanticAnalyzer<'a> {
             AstNodeKind::VarAssign(assign) => {
                 let assign = self.annotate_var_assign(assign, scope)?;
                 Ok(StatementAnnotation::VarAssign(assign))
+            }
+
+            AstNodeKind::If(stmt) => {
+                let stmt = self.annotate_if_statement(stmt, scope)?;
+                Ok(StatementAnnotation::If(stmt))
             }
 
             AstNodeKind::Atom(atom) => {

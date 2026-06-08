@@ -9,12 +9,12 @@ use crate::{
     symbol_table::TypeKind,
 };
 
-impl<'a> SemanticAnalyzer<'a> {
+impl<'a, 'scope> SemanticAnalyzer<'a> {
     pub fn annotate_var_decl(
         &mut self,
         decl: VarDeclStatement,
         decl_span: Span,
-        scope: &mut ScopeTable<'a>,
+        scope: &mut ScopeTable<'a, 'scope>,
     ) -> Result<VarDeclAnnotation, Diagnostic> {
         let symbol_span = decl.name;
 
