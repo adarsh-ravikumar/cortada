@@ -1,4 +1,50 @@
-x : float = 3
+x := 0
 
-x = 4 + 2 * 1 - 3
+while true:
+    outer := x
 
+    x := 1
+
+    while true:
+        middle := x
+
+        x := 2
+
+        while true:
+            inner := x
+
+            x := 3
+
+            deepest := x
+
+        after_inner := x
+
+    after_middle := x
+
+after_loop := x
+
+if true:
+    branch := x
+
+    while true:
+        branch_x := x
+
+        x := 4
+
+        while true:
+            nested_branch := x
+
+            x := 5
+
+            deepest_branch := x
+
+        after_nested_branch := x
+
+after_if := x
+
+while true:
+    x = 42
+
+    assigned := x
+
+final_x := x

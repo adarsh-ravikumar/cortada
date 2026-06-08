@@ -4,7 +4,7 @@ use crate::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
         CastAnnotation, ExpressionAnnotation, FloatAnnotation, IdentifierAnnotation, IfAnnotation,
         IntegerAnnotation, StatementAnnotation, UnaryAnnotation, VarAssignAnnotation,
-        VarDeclAnnotation,
+        VarDeclAnnotation, WhileAnnotation,
     },
     symbol_table::SymbolTable,
     utils::Style,
@@ -58,6 +58,10 @@ impl<'a> AnnotatedTreePrinter<'a> {
             }
 
             StatementAnnotation::If(if_stmt) => self.print_if(if_stmt, level, is_terminal),
+
+            StatementAnnotation::While(while_stmt) => {
+                self.print_while(while_stmt, level, is_terminal)
+            }
         }
     }
 
@@ -204,6 +208,45 @@ impl<'a> AnnotatedTreePrinter<'a> {
         }
     }
 
+    fn print_while(&self, stmt: &WhileAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!(
+            "{leader}{}{}While{}{}",
+            Style::BOLD,
+            Style::MAGENTA,
+            Style::RESET,
+            Style::RESET_BOLD
+        );
+
+        // condition
+        println!(
+            "{}{}{}condition",
+            Style::BRIGHT_BLACK,
+            Self::generate_field_leader(level + 1, false),
+            Style::MAGENTA,
+        );
+
+        self.print_expression(&stmt.condition, level + 2, false);
+
+        // body
+        self.print_statements(&stmt.body, level + 1, false);
+
+        // else
+        if stmt.else_stmt.is_some() {
+            println!(
+                "{}{}└── {}{}Else{}{}",
+                Style::BRIGHT_BLACK,
+                Self::generate_field_leader(level + 1, is_terminal),
+                Style::BOLD,
+                Style::MAGENTA,
+                Style::RESET,
+                Style::RESET_BOLD
+            );
+
+            self.print_statements(&stmt.else_stmt.as_ref().unwrap(), level + 2, false);
+        }
+    }
     fn print_expression(&self, expr: &ExpressionAnnotation, level: usize, is_terminal: bool) {
         match expr {
             ExpressionAnnotation::Binary(expr) => {
