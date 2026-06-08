@@ -51,7 +51,11 @@ pub enum TokenKind {
 
     KwrdInt,
     KwrdFloat,
+    KwrdBool,
+
     KwrdNull,
+    KwrdTrue,
+    KwrdFalse,
 
     EOF,
 }
@@ -64,16 +68,24 @@ impl TokenKind {
             "else" => Self::KwrdElse,
             "for" => Self::KwrdFor,
             "while" => Self::KwrdWhile,
+
             "fn" => Self::KwrdFn,
+
             "not" => Self::KwrdNot,
             "and" => Self::KwrdAnd,
             "or" => Self::KwrdOr,
+
             "return" => Self::KwrdReturn,
             "break" => Self::KwrdBreak,
             "continue" => Self::KwrdContinue,
-            "null" => Self::KwrdNull,
+
             "int" => Self::KwrdInt,
             "float" => Self::KwrdFloat,
+            "bool" => Self::KwrdBool,
+
+            "null" => Self::KwrdNull,
+            "true" => Self::KwrdTrue,
+            "false" => Self::KwrdFalse,
             _ => Self::Identifier,
         }
     }
@@ -140,10 +152,14 @@ impl TokenKind {
             TokenKind::KwrdReturn => "return",
             TokenKind::KwrdBreak => "break",
             TokenKind::KwrdContinue => "continue",
-            TokenKind::KwrdNull => "null",
 
             TokenKind::KwrdInt => "int",
             TokenKind::KwrdFloat => "float",
+            TokenKind::KwrdBool => "bool",
+
+            TokenKind::KwrdNull => "null",
+            TokenKind::KwrdTrue => "true",
+            TokenKind::KwrdFalse => "false",
 
             TokenKind::EOF => "end of file",
         }
