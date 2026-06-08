@@ -1,13 +1,16 @@
 use std::collections::HashMap;
 
-pub struct ScopeTable<'a> {
-    table: HashMap<&'a str, Vec<usize>>,
-    parent: Option<&'a Box<Self>>,
+pub struct ScopeTable<'src, 'scope> {
+    table: HashMap<&'src str, Vec<usize>>,
+    parent: Option<&'scope Box<Self>>,
     can_propogate: bool,
 }
 
-impl<'a> ScopeTable<'a> {
-    pub fn new(parent: Option<&'a Box<ScopeTable<'a>>>, can_propogate: bool) -> Box<Self> {
+impl<'src, 'scope> ScopeTable<'src, 'scope> {
+    pub fn new(
+        parent: Option<&'scope Box<ScopeTable<'src, 'scope>>>,
+        can_propogate: bool,
+    ) -> Box<Self> {
         Box::new(Self {
             table: HashMap::new(),
             parent,
@@ -15,7 +18,7 @@ impl<'a> ScopeTable<'a> {
         })
     }
 
-    pub fn add_symbol(&mut self, symbol: &'a str, id: usize) {
+    pub fn add_symbol(&mut self, symbol: &'src str, id: usize) {
         if let Some(existing) = self.table.get_mut(symbol) {
             existing.push(id)
         }
@@ -23,7 +26,7 @@ impl<'a> ScopeTable<'a> {
         self.table.insert(symbol, vec![id]);
     }
 
-    pub fn get_id(&self, symbol: &'a str) -> Option<&usize> {
+    pub fn get_id(&self, symbol: &'src str) -> Option<&usize> {
         if let Some(id) = self.table.get(symbol) {
             return Some(id.last().unwrap());
         }
