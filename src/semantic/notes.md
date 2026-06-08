@@ -34,7 +34,7 @@ Types
 [x] Boolean Expressions
 [x] Assignment Checking
 [x] Implicit Cast Insertion
-[ ] Identifier usage
+[x] Identifier usage
 [ ] Type Alias Resolution
 [ ] Function Call Checking
 
@@ -51,9 +51,6 @@ Diagnostics
 
 
 # order
-1) identifiers
-2) scope
-3) shadowing
 4) control flow
 5) functions 
 6) function calls

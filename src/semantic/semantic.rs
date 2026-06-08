@@ -18,7 +18,6 @@ impl<'a> SemanticAnalyzer<'a> {
             symbol_table: SymbolTable::new(file),
         }
     }
-
     pub fn create_annotated_tree(
         &mut self,
         ast: Box<AstNode>,

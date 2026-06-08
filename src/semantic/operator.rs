@@ -11,12 +11,8 @@ pub struct BinaryOpAnnotation {
 
 impl BinaryOpAnnotation {
     pub fn common_numeric_type(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
-        println!("{} {}", lhs.display(), rhs.display());
-
         let lhs_rank = lhs.rank()?;
         let rhs_rank = rhs.rank()?;
-
-        println!("{lhs_rank} {rhs_rank}");
 
         let (from, to) = if lhs_rank > rhs_rank {
             (rhs, lhs)

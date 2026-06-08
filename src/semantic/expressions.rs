@@ -1,5 +1,6 @@
-use crate::semantic::SemanticAnalyzer;
+use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
+use crate::symbol_table::ScopeTable;
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -19,20 +20,21 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_expression(
         &mut self,
         expression: Box<AstNode>,
+        scope: &ScopeTable,
     ) -> Result<Box<ExpressionAnnotation>, Diagnostic> {
         let span = expression.span;
 
         let expr = match expression.kind {
             AstNodeKind::Binary(expr) => {
-                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span)?)
+                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span, scope)?)
             }
 
             AstNodeKind::Unary(expr) => {
-                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span)?)
+                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span, scope)?)
             }
 
             AstNodeKind::Atom(atom) => {
-                let atom_annotated = self.annotate_atom(atom, span)?;
+                let atom_annotated = self.annotate_atom(atom, span, scope)?;
                 ExpressionAnnotation::Atom(atom_annotated)
             }
 
@@ -65,12 +67,13 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         expr: BinaryExpr,
         span: Span,
+        scope: &ScopeTable,
     ) -> Result<BinaryAnnotation, Diagnostic> {
         let lhs_span = expr.lhs.span;
         let rhs_span = expr.rhs.span;
 
-        let mut lhs = self.annotate_expression(expr.lhs)?;
-        let mut rhs = self.annotate_expression(expr.rhs)?;
+        let mut lhs = self.annotate_expression(expr.lhs, scope)?;
+        let mut rhs = self.annotate_expression(expr.rhs, scope)?;
 
         let op = BinaryOpAnnotation {
             operator: expr.op,
@@ -145,10 +148,11 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         expr: UnaryExpr,
         span: Span,
+        scope: &ScopeTable,
     ) -> Result<UnaryAnnotation, Diagnostic> {
         let operand_span = expr.operand.span;
 
-        let operand = self.annotate_expression(expr.operand)?;
+        let operand = self.annotate_expression(expr.operand, scope)?;
         let op = UnaryOpAnnotation {
             operator: expr.op,
             span: expr.op_span,
@@ -205,10 +209,47 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
+    pub fn annotate_identifier(
+        &mut self,
+        name: Span,
+        scope: &ScopeTable,
+    ) -> Result<AtomAnnotation, Diagnostic> {
+        let symbol = self.symbol_table.get_symbol(name);
+
+        let binding = match scope.get_id(symbol) {
+            Some(id) => self.symbol_table.get_binding(id).unwrap(),
+            None => {
+                return Err(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UndefinedIdentifier,
+
+                    msg: format!("use of undefined identifier `{}`", symbol),
+
+                    primary: Label {
+                        span: name,
+                        msg: "identifier is not defined".into(),
+                        paranthesise: false,
+                    },
+
+                    secondary: vec![],
+
+                    notes: vec!["identifiers must be declared before they can be used".into()],
+                });
+            }
+        };
+
+        Ok(AtomAnnotation::Identifier(IdentifierAnnotation {
+            entry: binding.id,
+            atom_type: binding.binding_type.clone(),
+            span: name,
+        }))
+    }
+
     pub fn annotate_atom(
         &mut self,
         atom: AtomKind,
         span: Span,
+        scope: &ScopeTable,
     ) -> Result<AtomAnnotation, Diagnostic> {
         let atom = match atom {
             AtomKind::Integer(value) => AtomAnnotation::Integer(IntegerAnnotation {
@@ -234,7 +275,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 atom_type: TypeKind::Builtin(BuiltinType::Null),
             }),
 
-            _ => panic!("unkown"),
+            AtomKind::Identifier => self.annotate_identifier(span, scope)?,
         };
 
         Ok(atom)

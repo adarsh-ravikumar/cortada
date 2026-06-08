@@ -30,12 +30,12 @@ impl BuiltinType {
         match self {
             Self::Integer => match target {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
-                TypeKind::Union(_) => false,
+                TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
             },
 
             Self::Float => match target {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
-                TypeKind::Union(_) => false,
+                TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
             },
 
             Self::Bool => false,

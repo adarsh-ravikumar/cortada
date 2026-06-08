@@ -1,5 +1,6 @@
 use crate::semantic::SemanticAnalyzer;
 
+use crate::symbol_table::ScopeTable;
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -13,12 +14,13 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         decl: VarDeclStatement,
         decl_span: Span,
+        scope: &mut ScopeTable<'a>,
     ) -> Result<VarDeclAnnotation, Diagnostic> {
         let symbol_span = decl.name;
 
         let symbol = self.symbol_table.get_symbol(symbol_span);
 
-        let mut value = self.annotate_expression(decl.value)?;
+        let mut value = self.annotate_expression(decl.value, scope)?;
 
         let value_type = value.get_type();
 
@@ -73,6 +75,8 @@ impl<'a> SemanticAnalyzer<'a> {
             .symbol_table
             .create_binding(decl_span, symbol_span, type_span, binding_type);
 
+        scope.add_symbol(symbol, id);
+
         Ok(VarDeclAnnotation {
             entry: id,
             value: *value,
@@ -82,17 +86,18 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_var_assign(
         &mut self,
         assign: VarAssignStatement,
+        scope: &ScopeTable,
     ) -> Result<VarAssignAnnotation, Diagnostic> {
         let symbol_span = assign.name;
 
         let symbol = self.symbol_table.get_symbol(symbol_span);
 
-        let mut value = self.annotate_expression(assign.value)?;
+        let mut value = self.annotate_expression(assign.value, scope)?;
 
         let value_type = value.get_type();
 
-        let binding = match self.symbol_table.get_binding_from_symbol(symbol) {
-            Some(b) => b,
+        let binding = match scope.get_id(symbol) {
+            Some(id) => self.symbol_table.get_binding(id).unwrap(),
             None => {
                 return Err(Diagnostic {
                     severity: DiagnosticSeverity::Error,

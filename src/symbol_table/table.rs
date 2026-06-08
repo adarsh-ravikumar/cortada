@@ -1,6 +1,6 @@
 use crate::{
     common::{IOFile, Span},
-    symbol_table::{BindingId, BindingTable, TypeKind, binding::BindingEntry, scope::ScopeTable},
+    symbol_table::{BindingId, BindingTable, TypeKind, binding::BindingEntry},
 };
 
 pub struct SymbolTable<'a> {
@@ -8,8 +8,6 @@ pub struct SymbolTable<'a> {
 
     binding_table: BindingTable,
     next_id: usize,
-
-    scope_stack: Vec<ScopeTable<'a>>,
 }
 
 impl<'a> SymbolTable<'a> {
@@ -18,7 +16,6 @@ impl<'a> SymbolTable<'a> {
             source,
             binding_table: BindingTable::new(),
             next_id: 0,
-            scope_stack: vec![ScopeTable::new()],
         }
     }
 
@@ -38,25 +35,12 @@ impl<'a> SymbolTable<'a> {
         self.binding_table
             .create(id, decl_span, symbol_span, type_span, binding_type);
 
-        let name = self.get_symbol(symbol_span);
-        self.scope_stack.last_mut().unwrap().add_symbol(name, id);
-
         self.next_id += 1;
 
         id
     }
 
-    pub fn get_binding_from_symbol(&self, symbol: &'a str) -> Option<&BindingEntry> {
-        let scope = self.scope_stack.last().unwrap();
-        let id = match scope.get_id(symbol) {
-            Some(id) => id,
-            None => return None,
-        };
-
-        self.binding_table.get(id)
-    }
-
-    pub fn get_binding_from_id(&self, id: &usize) -> Option<&BindingEntry> {
+    pub fn get_binding(&self, id: &usize) -> Option<&BindingEntry> {
         self.binding_table.get(id)
     }
 }
