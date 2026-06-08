@@ -4,15 +4,16 @@ use std::collections::BTreeSet;
 pub enum BuiltinType {
     Integer,
     Float,
+    Bool,
     Null,
 }
 
 impl BuiltinType {
-    pub fn rank(&self) -> u8 {
+    pub fn rank(&self) -> Option<u8> {
         match self {
-            Self::Null => 0,
-            Self::Integer => 1,
-            Self::Float => 2,
+            Self::Integer => Some(0),
+            Self::Float => Some(1),
+            _ => None,
         }
     }
 
@@ -20,11 +21,12 @@ impl BuiltinType {
         match self {
             Self::Integer => "int",
             Self::Float => "float",
+            Self::Bool => "bool",
             Self::Null => "null",
         }
     }
 
-    pub fn try_cast(&self, target: &TypeKind) -> bool {
+    pub fn try_implicit_cast(&self, target: &TypeKind) -> bool {
         match self {
             Self::Integer => match target {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
@@ -35,6 +37,8 @@ impl BuiltinType {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
                 TypeKind::Union(_) => false,
             },
+
+            Self::Bool => false,
 
             Self::Null => false,
         }
@@ -62,17 +66,21 @@ impl UnionType {
             .join(" | ")
     }
 
-    pub fn rank(&self) -> u8 {
+    pub fn rank(&self) -> Option<u8> {
         let mut max: u8 = 0;
 
         for variant in &self.variants {
-            let rank = variant.rank();
-            if rank > max {
-                max = rank
+            match variant.rank() {
+                None => return None,
+                Some(rank) => {
+                    if rank > max {
+                        max = rank
+                    }
+                }
             }
         }
 
-        max
+        Some(max)
     }
 }
 
@@ -110,14 +118,14 @@ impl TypeKind {
         }
     }
 
-    pub fn try_cast(&self, target: &Self) -> bool {
+    pub fn try_implicit_cast(&self, target: &Self) -> bool {
         match self {
-            TypeKind::Builtin(ty) => ty.try_cast(target),
+            TypeKind::Builtin(ty) => ty.try_implicit_cast(target),
             TypeKind::Union(ty) => ty.accepts(target),
         }
     }
 
-    pub fn rank(&self) -> u8 {
+    pub fn rank(&self) -> Option<u8> {
         match self {
             TypeKind::Builtin(ty) => ty.rank(),
             TypeKind::Union(ty) => ty.rank(),

@@ -12,8 +12,8 @@ mod types;
 mod variables;
 
 pub use node::{
-    AstNode, AstNodeKind, BinaryExpr, FloatExpr, IntegerExpr, Program, Statements, TypePrimary,
-    TypePrimaryKind, TypeUnion, UnaryExpr, VarAssignStatement, VarDeclStatement,
+    AstNode, AstNodeKind, AtomKind, BinaryExpr, Program, Statements, TypePrimary, TypePrimaryKind,
+    TypeUnion, UnaryExpr, VarAssignStatement, VarDeclStatement,
 };
 pub use op::{BinaryOp, UnaryOp};
 pub use parser::Parser;
