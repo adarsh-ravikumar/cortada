@@ -1,15 +1,23 @@
 use crate::{
     parser::AstNodeKind,
     semantic::{
-        AnnotatedTree, AtomAnnotation, BinaryAnnotation, CastAnnotation, ExpressionAnnotation,
-        FloatAnnotation, IntegerAnnotation, StatementAnnotation, UnaryAnnotation,
+        AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, CastAnnotation,
+        ExpressionAnnotation, FloatAnnotation, IntegerAnnotation, StatementAnnotation,
+        UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
     },
+    symbol_table::SymbolTable,
     utils::Style,
 };
 
-pub struct AnnotatedTreePrinter;
+pub struct AnnotatedTreePrinter<'a> {
+    pub symbol_table: &'a SymbolTable<'a>,
+}
 
-impl AnnotatedTreePrinter {
+impl<'a> AnnotatedTreePrinter<'a> {
+    pub fn new(symbol_table: &'a SymbolTable<'a>) -> Self {
+        Self { symbol_table }
+    }
+
     fn generate_space_leader(level: usize) -> String {
         "│   ".repeat(level - 1)
     }
@@ -39,37 +47,99 @@ impl AnnotatedTreePrinter {
         )
     }
 
-    fn print_statement(stmt: &StatementAnnotation, level: usize, is_terminal: bool) {
+    fn print_statement(&self, stmt: &StatementAnnotation, level: usize, is_terminal: bool) {
         match stmt {
             StatementAnnotation::Expression(expr) => {
-                Self::print_expression(expr, level, is_terminal);
+                self.print_expression(expr, level, is_terminal)
+            }
+
+            StatementAnnotation::VarDecl(decl) => self.print_var_decl(decl, level, is_terminal),
+
+            StatementAnnotation::VarAssign(assign) => {
+                self.print_var_assign(assign, level, is_terminal)
             }
 
             _ => panic!("not implemented"),
         }
     }
 
-    fn print_expression(expr: &ExpressionAnnotation, level: usize, is_terminal: bool) {
+    fn print_var_decl(&self, decl: &VarDeclAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!("{leader}{}VarDecl{}", Style::BLUE, Style::RESET);
+
+        let leader = Self::generate_field_leader(level + 1, false);
+
+        let entry = self.symbol_table.get_binding_from_id(&decl.entry).unwrap();
+
+        let name = self.symbol_table.get_symbol(entry.symbol_span);
+
+        println!(
+            "{leader}{}name: {}{}{}",
+            Style::BLUE,
+            Style::BRIGHT_YELLOW,
+            name,
+            Style::RESET
+        );
+
+        println!(
+            "{leader}{}type: {}{}",
+            Style::BLUE,
+            Style::RESET,
+            entry.binding_type.display(),
+        );
+
+        println!("{leader}{}value{}", Style::BLUE, Style::RESET,);
+        self.print_expression(&decl.value, level + 2, is_terminal);
+    }
+
+    fn print_var_assign(&self, assign: &VarAssignAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!("{leader}{}VarDecl{}", Style::BLUE, Style::RESET);
+
+        let leader = Self::generate_field_leader(level + 1, false);
+
+        let entry = self
+            .symbol_table
+            .get_binding_from_id(&assign.entry_reference)
+            .unwrap();
+
+        let name = self.symbol_table.get_symbol(entry.symbol_span);
+
+        println!(
+            "{leader}{}name: {}{}{}",
+            Style::BLUE,
+            Style::BRIGHT_YELLOW,
+            name,
+            Style::RESET
+        );
+
+        println!("{leader}{}value{}", Style::BLUE, Style::RESET,);
+        self.print_expression(&assign.value, level + 2, is_terminal);
+    }
+
+    fn print_expression(&self, expr: &ExpressionAnnotation, level: usize, is_terminal: bool) {
         match expr {
             ExpressionAnnotation::Binary(expr) => {
-                Self::print_binary_expression(expr, level, is_terminal);
+                self.print_binary_expression(expr, level, is_terminal);
             }
 
             ExpressionAnnotation::Unary(expr) => {
-                Self::print_unary_expression(expr, level, is_terminal);
+                self.print_unary_expression(expr, level, is_terminal);
             }
 
             ExpressionAnnotation::Atom(atom) => {
-                Self::print_atom(atom, level, is_terminal);
+                self.print_atom(atom, level, is_terminal);
             }
 
             ExpressionAnnotation::Cast(cast) => {
-                Self::print_cast(cast, level, is_terminal);
+                self.print_cast(cast, level, is_terminal);
             }
         }
     }
 
-    fn print_binary_expression(expr: &BinaryAnnotation, level: usize, is_terminal: bool) {
+    fn print_binary_expression(&self, expr: &BinaryAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
         println!(
@@ -86,11 +156,11 @@ impl AnnotatedTreePrinter {
             Style::RESET_BOLD
         );
 
-        Self::print_expression(&expr.lhs, level + 1, false);
-        Self::print_expression(&expr.rhs, level + 1, is_terminal);
+        self.print_expression(&expr.lhs, level + 1, false);
+        self.print_expression(&expr.rhs, level + 1, is_terminal);
     }
 
-    fn print_unary_expression(expr: &UnaryAnnotation, level: usize, is_terminal: bool) {
+    fn print_unary_expression(&self, expr: &UnaryAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, false);
 
         println!(
@@ -107,10 +177,10 @@ impl AnnotatedTreePrinter {
             Style::RESET_BOLD
         );
 
-        Self::print_expression(&expr.operand, level + 1, is_terminal);
+        self.print_expression(&expr.operand, level + 1, is_terminal);
     }
 
-    fn print_cast(cast: &CastAnnotation, level: usize, is_terminal: bool) {
+    fn print_cast(&self, cast: &CastAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, false);
 
         println!(
@@ -129,18 +199,20 @@ impl AnnotatedTreePrinter {
             Style::RESET_BOLD
         );
 
-        Self::print_expression(&cast.expr, level + 1, is_terminal);
+        self.print_expression(&cast.expr, level + 1, is_terminal);
     }
 
-    fn print_atom(expr: &AtomAnnotation, level: usize, is_terminal: bool) {
+    fn print_atom(&self, expr: &AtomAnnotation, level: usize, is_terminal: bool) {
         match expr {
-            AtomAnnotation::Integer(atom) => Self::print_integer(atom, level, is_terminal),
-            AtomAnnotation::Float(atom) => Self::print_float(atom, level, is_terminal),
+            AtomAnnotation::Integer(atom) => self.print_integer(atom, level, is_terminal),
+
+            AtomAnnotation::Float(atom) => self.print_float(atom, level, is_terminal),
+
             _ => panic!("unimplemented"),
         }
     }
 
-    fn print_integer(integer: &IntegerAnnotation, level: usize, is_terminal: bool) {
+    fn print_integer(&self, integer: &IntegerAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
         println!(
@@ -158,8 +230,9 @@ impl AnnotatedTreePrinter {
         );
     }
 
-    fn print_float(float: &FloatAnnotation, level: usize, is_terminal: bool) {
+    fn print_float(&self, float: &FloatAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
+
         let value = if float.value.fract() == 0.0 {
             format!("{:.1}", float.value)
         } else {
@@ -181,7 +254,7 @@ impl AnnotatedTreePrinter {
         );
     }
 
-    pub fn print(tree: &AnnotatedTree) {
+    pub fn print_statements(&self, stmts: &AnnotatedStatements) {
         println!(
             "{}{}Statements{}{}",
             Style::BOLD,
@@ -190,8 +263,22 @@ impl AnnotatedTreePrinter {
             Style::RESET_BOLD
         );
 
-        for statement in tree.statements.iter() {
-            Self::print_statement(statement, 1, false);
+        for statement in stmts.statements.iter() {
+            self.print_statement(statement, 1, false);
+        }
+    }
+
+    pub fn print(&self, tree: &AnnotatedTree) {
+        println!(
+            "{}{}Program{}{}",
+            Style::BOLD,
+            Style::MAGENTA,
+            Style::RESET,
+            Style::RESET_BOLD
+        );
+
+        for statement in tree.statements.statements.iter() {
+            self.print_statement(statement, 1, false);
         }
     }
 }
