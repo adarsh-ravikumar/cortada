@@ -1,6 +1,7 @@
 use crate::{
-    common::{Span, Type},
+    common::Span,
     parser::{BinaryOp, UnaryOp},
+    symbol_table::{BuiltinType, TypeKind},
 };
 
 pub struct BinaryOpAnnotation {
@@ -9,11 +10,11 @@ pub struct BinaryOpAnnotation {
 }
 
 impl BinaryOpAnnotation {
-    pub fn get_result_type(&self, lhs: Type, rhs: Type) -> Option<Type> {
+    pub fn get_result_type(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
         match self.operator {
             _ => {
                 if lhs == rhs {
-                    let result = lhs;
+                    let result = lhs.clone();
                     return Some(result);
                 }
                 None
@@ -21,17 +22,38 @@ impl BinaryOpAnnotation {
         }
     }
 
-    pub fn try_cast(&self, lhs: Type, rhs: Type) -> Option<(Type, Type)> {
+    pub fn try_cast(&self, lhs: &TypeKind, rhs: &TypeKind) -> Option<TypeKind> {
         match self.operator {
-            _ => {
-                let result = lhs;
+            BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply => {
+                let lhs_rank = lhs.rank();
+                let rhs_rank = rhs.rank();
 
-                if !rhs.try_cast(lhs) {
+                let (from, to) = if lhs_rank > rhs_rank {
+                    (rhs, lhs)
+                } else {
+                    (lhs, rhs)
+                };
+
+                match from.try_cast(to) {
+                    true => Some(to.clone()),
+                    false => None,
+                }
+            }
+
+            BinaryOp::Divide => {
+                let float_type = TypeKind::Builtin(BuiltinType::Float);
+                if !lhs.try_cast(&float_type) {
                     return None;
                 }
 
-                Some((lhs, result))
+                if !rhs.try_cast(&float_type) {
+                    return None;
+                }
+
+                Some(float_type)
             }
+
+            _ => panic!("unimplemented"),
         }
     }
 }
@@ -42,21 +64,25 @@ pub struct UnaryOpAnnotation {
 }
 
 impl UnaryOpAnnotation {
-    pub fn get_result_type(&self, operand: Type) -> Option<Type> {
+    pub fn get_result_type(&self, operand: &TypeKind) -> Option<TypeKind> {
         match self.operator {
             UnaryOp::Plus | UnaryOp::Minus => {
-                if !matches!(operand, Type::Integer | Type::Float) {
+                if !matches!(
+                    operand,
+                    &TypeKind::Builtin(BuiltinType::Integer)
+                        | &TypeKind::Builtin(BuiltinType::Float)
+                ) {
                     return None;
                 }
 
-                Some(operand)
+                Some(operand.clone())
             }
 
             _ => panic!("unimplemented"),
         }
     }
 
-    pub fn try_cast(&self, _: Type) -> Option<(Type, Type)> {
+    pub fn try_cast(&self, _: &TypeKind) -> Option<TypeKind> {
         match self.operator {
             UnaryOp::Plus | UnaryOp::Minus => {
                 return None;
