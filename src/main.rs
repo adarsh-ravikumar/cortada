@@ -5,6 +5,7 @@ mod utils;
 mod lexer;
 mod parser;
 mod semantic;
+mod symbol_table;
 
 mod diagnostic;
 
@@ -64,6 +65,11 @@ fn main() {
     };
 
     println!("ANNOTATED ABSTRACT SYNTAX TREE:");
-    AnnotatedTreePrinter::print(&annotated_tree);
+    let printer = AnnotatedTreePrinter {
+        symbol_table: &analyzer.symbol_table,
+    };
+
+    printer.print(&annotated_tree);
+
     println!("\n");
 }
