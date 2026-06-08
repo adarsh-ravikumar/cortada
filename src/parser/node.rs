@@ -105,13 +105,11 @@ pub struct CallExpr {
 }
 
 #[derive(Debug)]
-pub struct IntegerExpr {
-    pub value: i64,
-}
-
-#[derive(Debug)]
-pub struct FloatExpr {
-    pub value: f64,
+pub enum AtomKind {
+    Integer(i64),
+    Float(f64),
+    Identifier,
+    Null,
 }
 
 #[derive(Debug)]
@@ -139,10 +137,7 @@ pub enum AstNodeKind {
     Unary(UnaryExpr),
     Call(CallExpr),
 
-    Integer(IntegerExpr),
-    Float(FloatExpr),
-    Null,
-    Identifier,
+    Atom(AtomKind),
 }
 
 // Node
@@ -336,28 +331,28 @@ impl AstNode {
 
     pub fn integer(value: i64, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Integer(IntegerExpr { value }),
+            kind: AstNodeKind::Atom(AtomKind::Integer(value)),
             span: Span::new(start, end),
         })
     }
 
     pub fn float(value: f64, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Float(FloatExpr { value }),
+            kind: AstNodeKind::Atom(AtomKind::Float(value)),
             span: Span::new(start, end),
         })
     }
 
     pub fn identifier(start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Identifier,
+            kind: AstNodeKind::Atom(AtomKind::Identifier),
             span: Span::new(start, end),
         })
     }
 
     pub fn null(start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
-            kind: AstNodeKind::Null,
+            kind: AstNodeKind::Atom(AtomKind::Null),
             span: Span::new(start, end),
         })
     }

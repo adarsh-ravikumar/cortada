@@ -1,10 +1,8 @@
-use std::os::macos::raw::stat;
-
 use crate::{
     common::IOFile,
     diagnostic::Diagnostic,
     lexer::{Token, TokenKind},
-    parser::{node::AstNode, statements},
+    parser::node::AstNode,
 };
 
 pub struct Parser<'a> {
