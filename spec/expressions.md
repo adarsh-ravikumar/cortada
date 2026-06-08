@@ -32,6 +32,8 @@ call_suffix           -> "(" (expression ("," expression)*)? ","? ")"
 atom                  -> INTEGER
                        | FLOAT
                        | IDENTIFIER
+                       | "true"
+                       | "false"
                        | "null"
                        | "(" expression ")"
 ```

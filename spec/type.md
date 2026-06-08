@@ -9,6 +9,7 @@ type_union      -> type_primary ("|" type_primary)*
 
 type_primary    -> "int"
                  | "float"
+                 | "bool"
                  | "(" type_expression ")"
 ```
 
