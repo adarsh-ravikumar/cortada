@@ -53,6 +53,12 @@ impl<'a> Parser<'a> {
                 TypePrimaryKind::Float
             }
 
+            TokenKind::KwrdBool => {
+                start = cur_tok.span.start;
+                end = cur_tok.span.end;
+                TypePrimaryKind::Bool
+            }
+
             _ => {
                 return Err(Diagnostic {
                     severity: DiagnosticSeverity::Error,

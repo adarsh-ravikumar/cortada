@@ -71,6 +71,7 @@ pub struct ReturnStatement {
 pub enum TypePrimaryKind {
     Integer,
     Float,
+    Bool,
 }
 
 #[derive(Debug)]
@@ -108,6 +109,7 @@ pub struct CallExpr {
 pub enum AtomKind {
     Integer(i64),
     Float(f64),
+    Bool(bool),
     Identifier,
     Null,
 }
@@ -339,6 +341,13 @@ impl AstNode {
     pub fn float(value: f64, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Atom(AtomKind::Float(value)),
+            span: Span::new(start, end),
+        })
+    }
+
+    pub fn bool(value: bool, start: usize, end: usize) -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::Atom(AtomKind::Bool(value)),
             span: Span::new(start, end),
         })
     }
