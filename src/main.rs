@@ -28,50 +28,45 @@ fn main() {
 
     let mut lexer = Lexer::new(&file);
 
-    let toks = match lexer.tokenize() {
-        Ok(t) => t,
-        Err(mut diag) => {
-            let report = diag_renderer.render(&mut diag);
-            println!("\n\n{report}");
-            return;
-        }
-    };
+    let toks = lexer.tokenize();
+    if !lexer.diagnostics.is_empty() {
+        let report = diag_renderer.render(&mut lexer.diagnostics);
+        println!("{report}");
+        return;
+    }
 
-    println!("TOKENS:");
-    TokenPrinter::print(&toks, &file);
+    //    println!("TOKENS:");
+    //   TokenPrinter::print(&toks, &file);
 
     let mut parser = Parser::new(&file, &toks);
 
-    let ast = match parser.parse() {
-        Ok(a) => a,
-        Err(mut diag) => {
-            let report = diag_renderer.render(&mut diag);
-            println!("\n\n{report}");
-            return;
-        }
-    };
+    let ast = parser.parse();
+    if !parser.diagnostics.is_empty() {
+        let report = diag_renderer.render(&mut parser.diagnostics);
+        println!("{report}");
+        return;
+    }
 
     println!("ABSTRACT SYNTAX TREE:");
     AstPrinter::print(&ast, &file);
     println!("\n");
-
-    let mut analyzer = SemanticAnalyzer::new(&file);
-
-    let annotated_tree = match analyzer.create_annotated_tree(ast) {
-        Ok(a) => a,
-        Err(mut diag) => {
-            let report = diag_renderer.render(&mut diag);
-            println!("\n\n{report}");
-            return;
-        }
-    };
-
-    println!("ANNOTATED ABSTRACT SYNTAX TREE:");
-    let printer = AnnotatedTreePrinter {
-        symbol_table: &analyzer.symbol_table,
-    };
-
-    printer.print(&annotated_tree);
-
-    println!("\n");
+    //
+    // let mut analyzer = SemanticAnalyzer::new(&file);
+    //
+    // let annotated_tree = match analyzer.create_annotated_tree(ast) {
+    //     Ok(a) => a,
+    //     Err(mut diag) => {
+    //         let report = diag_renderer.render(&mut diag);
+    //         println!("\n\n{report}");
+    //         return;
+    //     }
+    // };
+    //
+    // println!("ANNOTATED ABSTRACT SYNTAX TREE:");
+    // let printer = AnnotatedTreePrinter {
+    //     symbol_table: &analyzer.symbol_table,
+    // };
+    //
+    // printer.print(&annotated_tree);
+    //
 }

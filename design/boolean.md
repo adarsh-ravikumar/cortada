@@ -1,0 +1,2 @@
+- Every value of every type (except for null) is true
+- Every value that is null is false

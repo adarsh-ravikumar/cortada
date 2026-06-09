@@ -33,6 +33,7 @@ impl AstPrinter {
         };
 
         match &ast.kind {
+            AstNodeKind::Error => (),
             AstNodeKind::Atom(atom) => match atom {
                 AtomKind::Integer(val) => println!(
                     "{leader}{}Integer{}({}{}{})",
@@ -364,14 +365,15 @@ impl AstPrinter {
 
                 if let Some(t) = &stmt.return_type {
                     println!(
-                        "{}{}├── {}Return Type: {}{}{}",
+                        "{}{}├── {}Return Type{}{}",
                         Style::BRIGHT_BLACK,
                         Self::generate_leader(level + 1),
                         Style::CYAN,
                         Style::BRIGHT_YELLOW,
-                        file.view_span(*t),
                         Style::RESET
                     );
+
+                    Self::print_helper(t, file, level + 2);
                 }
 
                 if !stmt.params.is_empty() {

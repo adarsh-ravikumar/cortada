@@ -16,8 +16,10 @@ impl IOFile {
         let src = fs::read_to_string(&path)
             .map_err(|why| format!("Failed to open file {}: {}", path.display(), why))?;
 
-        let src = src.into_bytes();
+        let mut src = src.into_bytes();
         let line_starts = Self::compute_line_starts(&src);
+
+        src.push(b'\n');
 
         Ok(IOFile {
             path,

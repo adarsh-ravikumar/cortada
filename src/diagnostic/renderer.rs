@@ -300,7 +300,7 @@ impl<'a> DiagnosticRenderer<'a> {
         let mut max: usize = 0;
 
         for label in diag.labels.iter() {
-            let (line, col) = self.file.line_col_from_index(label.span.end);
+            let (line, _) = self.file.line_col_from_index(label.span.end);
             if line > max {
                 max = line;
             }

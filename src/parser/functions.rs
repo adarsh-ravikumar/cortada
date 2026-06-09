@@ -1,6 +1,4 @@
 use crate::{
-    common::Span,
-    diagnostic::Diagnostic,
     lexer::TokenKind,
     parser::{
         Parser,
