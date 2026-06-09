@@ -66,19 +66,28 @@ impl<'a> DiagnosticRenderer<'a> {
     fn build_loc_info(&self, diag: &Diagnostic) -> String {
         let (line, col) = self.file.line_col_from_index(diag.location.start);
 
+        let spaces = " ".repeat(self.line_num_len + 1);
         format!(
-            "{}-->{} {}:{}:{}\n\n",
-            Style::BRIGHT_BLUE,
+            "{spaces}{}{}-->{} {}:{}:{}\n{spaces}{}{} │\n",
+            Style::BOLD,
+            Style::BRIGHT_BLACK,
             Style::RESET,
             self.file.path.display(),
             line,
-            col
+            col,
+            Style::BOLD,
+            Style::BRIGHT_BLACK,
         )
     }
 
     fn break_span(&self, span: Span) -> Vec<DiagnosticSpan> {
         let (start_line, start_col) = self.file.line_col_from_index(span.start);
-        let (end_line, end_col) = self.file.line_col_from_index(span.end);
+        let (mut end_line, mut end_col) = self.file.line_col_from_index(span.end);
+
+        if end_col == 1 && end_line - start_line == 1 {
+            end_line = start_line;
+            end_col = span.start - self.file.line_starts[start_line - 1] + 1;
+        }
 
         if start_line == end_line {
             vec![DiagnosticSpan {
@@ -88,7 +97,7 @@ impl<'a> DiagnosticRenderer<'a> {
                 end_col,
             }]
         } else {
-            let start_line_end = self.file.line_starts[start_line] - 1 - start_col;
+            let start_line_end = span.start - self.file.line_starts[start_line - 1] + 1;
 
             vec![
                 DiagnosticSpan {
@@ -287,19 +296,42 @@ impl<'a> DiagnosticRenderer<'a> {
         res
     }
 
-    pub fn render(&mut self, diag: &mut Diagnostic) -> String {
-        diag.labels.sort_by_key(|label| label.span.start);
+    fn max_line_num_len(&self, diag: &Diagnostic) -> usize {
+        let mut max: usize = 0;
 
-        let max_line_num = diag.labels.last().unwrap();
-        let max_line_num = self.file.line_from_index(max_line_num.span.end).unwrap();
-        self.line_num_len = Self::num_len(max_line_num);
+        for label in diag.labels.iter() {
+            let (line, col) = self.file.line_col_from_index(label.span.end);
+            if line > max {
+                max = line;
+            }
+        }
 
+        Self::num_len(max)
+    }
+
+    pub fn render(&mut self, diagnostics: &mut Vec<Diagnostic>) -> String {
         let mut res = String::new();
 
-        res.push_str(&self.build_msg(diag));
-        res.push_str(&self.build_loc_info(diag));
-        res.push_str(&self.build_labels(diag));
-        res.push_str(&self.build_notes(diag));
+        for diag in diagnostics.iter_mut() {
+            diag.labels.sort_by_key(|label| label.span.start);
+
+            self.line_num_len = self.max_line_num_len(diag);
+
+            res.push_str(&self.build_msg(diag));
+            res.push_str(&self.build_loc_info(diag));
+            res.push_str(&self.build_labels(diag));
+            res.push_str(&self.build_notes(diag));
+
+            res.push('\n');
+        }
+
+        res.push_str(&format!(
+            "{}{}error:{} could not compile due to {} previous errors",
+            Style::BOLD,
+            Style::BRIGHT_RED,
+            Style::RESET,
+            diagnostics.len(),
+        ));
 
         res
     }
