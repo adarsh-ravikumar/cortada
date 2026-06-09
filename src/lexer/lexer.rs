@@ -25,6 +25,7 @@ pub struct Lexer<'a> {
     position: usize,
     indentation: Vec<usize>,
     delimiter: Vec<Delimiter>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl<'a> Lexer<'a> {
@@ -33,8 +34,13 @@ impl<'a> Lexer<'a> {
             src,
             position: 0,
             indentation: vec![0],
+            diagnostics: Vec::new(),
             delimiter: Vec::new(),
         }
+    }
+
+    fn emit_error(&mut self, diag: Diagnostic) {
+        self.diagnostics.push(diag);
     }
 
     fn advance(&mut self) -> u8 {
@@ -73,7 +79,7 @@ impl<'a> Lexer<'a> {
 
         loop {
             match self.peek(0) {
-                b'0'..=b'9' => {
+                b'0'..=b'9' | b'_' => {
                     self.advance();
                 }
 
@@ -115,7 +121,7 @@ impl<'a> Lexer<'a> {
         Token::new(kind, start, self.position)
     }
 
-    fn handle_comment(&mut self, start: usize) -> Result<(), Diagnostic> {
+    fn handle_comment(&mut self, start: usize) {
         // multi-line
         if self.peek(0) == b'~' && self.peek(1) == b'~' {
             let start: Span = Span::new(start, self.position + 2);
@@ -124,7 +130,7 @@ impl<'a> Lexer<'a> {
 
             loop {
                 if self.is_at_end() {
-                    return Err(Diagnostic {
+                    self.emit_error(Diagnostic {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::UnmatchedDelimiter,
                         msg: "unclosed multi-line comment".into(),
@@ -145,6 +151,8 @@ impl<'a> Lexer<'a> {
                         ],
                         notes: vec!["multi-line comments must be terminated with '~~~'".into()],
                     });
+
+                    return;
                 }
 
                 if self.peek(0) == b'~' && self.peek(1) == b'~' && self.peek(2) == b'~' {
@@ -154,8 +162,6 @@ impl<'a> Lexer<'a> {
 
                 self.advance();
             }
-
-            return Ok(());
         }
 
         // single line
@@ -164,21 +170,19 @@ impl<'a> Lexer<'a> {
         }
 
         self.advance();
-
-        Ok(())
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>, Diagnostic> {
+    fn next_token(&mut self) -> Option<Token> {
         let start = self.position;
 
         if self.is_at_end() {
-            return Ok(Some(Token::new(TokenKind::EOF, start, start)));
+            return Some(Token::new(TokenKind::EOF, start, start));
         }
 
         let ch = self.advance();
 
         if ch == b' ' {
-            return Ok(None);
+            return None;
         }
 
         let tok_type = match ch {
@@ -195,13 +199,15 @@ impl<'a> Lexer<'a> {
                 let pair = self.delimiter.pop();
 
                 if pair.is_none() {
-                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    self.emit_error(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 let pair = pair.unwrap();
 
                 if pair.ch != b'(' {
-                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    self.emit_error(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 TokenKind::RightParen
@@ -216,13 +222,15 @@ impl<'a> Lexer<'a> {
                 let pair = self.delimiter.pop();
 
                 if pair.is_none() {
-                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    self.emit_error(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 let pair = pair.unwrap();
 
                 if pair.ch != b'[' {
-                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    self.emit_error(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 TokenKind::RightBracket
@@ -237,13 +245,15 @@ impl<'a> Lexer<'a> {
                 let pair = self.delimiter.pop();
 
                 if pair.is_none() {
-                    return Err(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    self.emit_error(Self::unmatched_delimiter(Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 let pair = pair.unwrap();
 
                 if pair.ch != b'{' {
-                    return Err(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    self.emit_error(Self::mismatched_delimiter(pair, Delimiter { ch, start }));
+                    return Some(Token::new(TokenKind::Error, 0, 0));
                 }
 
                 TokenKind::RightBrace
@@ -307,54 +317,60 @@ impl<'a> Lexer<'a> {
                 if self.match_char(b'=') {
                     TokenKind::NotEqual
                 } else {
-                    return Err(Diagnostic {
+                    self.emit_error(Diagnostic {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::UnexpectedChar,
                         msg: "unexpected character '!'".into(),
                         location: Span::new(start, start),
                         labels: vec![Label {
                             span: Span::new(start, start),
-                            msg: "'!' is not a valid token".into(),
+                            msg: format!("unexpected character"),
                             kind: LabelKind::Primary,
                             paranthesise: false,
                         }],
                         notes: vec!["if you meant not-equal, use '!='".into()],
                     });
+
+                    TokenKind::Error
                 }
             }
 
             b'\n' => TokenKind::Newline,
 
-            b'0'..=b'9' => return Ok(Some(self.tokenize_number(start))),
+            b'0'..=b'9' => return Some(self.tokenize_number(start)),
 
-            b'a'..=b'z' | b'A'..=b'Z' | b'_' => return Ok(Some(self.tokenize_identifier(start))),
+            b'a'..=b'z' | b'A'..=b'Z' | b'_' => return Some(self.tokenize_identifier(start)),
 
             b'~' => {
-                self.handle_comment(start)?;
-                return Ok(None);
+                self.handle_comment(start);
+                return None;
             }
 
             ch => {
-                return Err(Diagnostic {
+                self.emit_error(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::UnexpectedChar,
                     msg: format!("unexpected character '{}'", char::from(ch)),
                     location: Span::new(start, start),
                     labels: vec![Label {
                         span: Span::new(start, start),
-                        msg: format!("'{}' is not a valid token", char::from(ch)),
+                        msg: format!("unexpected character"),
                         kind: LabelKind::Primary,
                         paranthesise: false,
                     }],
                     notes: vec![],
                 });
+
+                self.advance();
+
+                TokenKind::Error
             }
         };
 
-        Ok(Some(Token::new(tok_type, start, self.position)))
+        Some(Token::new(tok_type, start, self.position))
     }
 
-    fn track_indent(&mut self) -> Result<Vec<Token>, Diagnostic> {
+    fn track_indent(&mut self) -> Vec<Token> {
         let start = self.position;
 
         let mut tokens: Vec<Token> = Vec::new();
@@ -368,14 +384,14 @@ impl<'a> Lexer<'a> {
             && starting_indent != b'\n'
             && self.indentation.is_empty()
         {
-            return Ok(tokens);
+            return tokens;
         }
 
         loop {
             match self.peek(0) {
                 ch if ch == b' ' || ch == b'\t' => {
                     if ch != starting_indent {
-                        return Err(Diagnostic {
+                        self.emit_error(Diagnostic {
                             severity: DiagnosticSeverity::Error,
                             class: DiagnosticClass::InvalidLayout,
                             msg: format!("inconsistent use of tabs and spaces in indentation"),
@@ -388,12 +404,16 @@ impl<'a> Lexer<'a> {
                             }],
                             notes: vec!["use only tabs or only spaces for indentation".into()],
                         });
+
+                        while !matches!(self.peek(0), b' ' | b'\t') {
+                            self.advance();
+                        }
                     }
 
                     indent += if ch == b' ' { 1 } else { 4 };
                 }
 
-                b'\n' => return Ok(tokens),
+                b'\n' => return tokens,
                 _ => break,
             }
 
@@ -403,7 +423,7 @@ impl<'a> Lexer<'a> {
         let current = *self.indentation.last().unwrap();
 
         if indent == current {
-            return Ok(tokens);
+            return tokens;
         }
 
         if indent > current {
@@ -422,7 +442,7 @@ impl<'a> Lexer<'a> {
             let last = *self.indentation.last().unwrap();
 
             if indent != last {
-                return Err(Diagnostic {
+                self.emit_error(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::InvalidLayout,
 
@@ -448,19 +468,23 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(tokens)
+        tokens
     }
 
-    pub fn tokenize(&mut self) -> Result<Vec<Token>, Diagnostic> {
-        let mut tokens: Vec<Token> = self.track_indent()?;
+    pub fn tokenize(&mut self) -> Vec<Token> {
+        let mut tokens: Vec<Token> = self.track_indent();
 
         loop {
-            let token = match self.next_token()? {
+            let token = match self.next_token() {
                 None => continue,
                 Some(t) => t,
             };
 
             match &token.kind {
+                TokenKind::Error => {
+                    self.advance();
+                }
+
                 TokenKind::EOF => {
                     while let Some(v) = self.indentation.pop() {
                         if v == 0 {
@@ -481,17 +505,21 @@ impl<'a> Lexer<'a> {
                     }
 
                     tokens.push(token);
-                    tokens.extend(self.track_indent()?)
+                    tokens.extend(self.track_indent());
                 }
 
                 _ => tokens.push(token),
             }
         }
 
-        if let Some(open) = self.delimiter.pop() {
+        if !self.delimiter.is_empty() {
+            self.delimiter.reverse();
+        }
+
+        while let Some(open) = self.delimiter.pop() {
             let eof_pos = tokens.last().unwrap().span.start;
 
-            return Err(Diagnostic {
+            self.emit_error(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::UnmatchedDelimiter,
 
@@ -519,9 +547,9 @@ impl<'a> Lexer<'a> {
 
                 notes: vec![],
             });
-        };
+        }
 
-        Ok(tokens)
+        tokens
     }
 
     // Errors

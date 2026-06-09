@@ -58,6 +58,7 @@ pub enum TokenKind {
     KwrdFalse,
 
     EOF,
+    Error,
 }
 
 impl TokenKind {
@@ -162,6 +163,8 @@ impl TokenKind {
             TokenKind::KwrdFalse => "false",
 
             TokenKind::EOF => "end of file",
+
+            TokenKind::Error => "error",
         }
     }
 }
