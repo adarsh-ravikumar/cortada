@@ -5,7 +5,7 @@
 ```text
 fn_stmt -> "fn" IDENTIFIER
            "(" (param ("," param)*)? ","? ")"
-           ("->" IDENTIFIER)?
+           ("->" type_expression)?
            suite
 
 param   -> IDENTIFIER
