@@ -1,6 +1,6 @@
 use crate::{
     common::Span,
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     lexer::TokenKind,
     parser::{BinaryOp, Parser, UnaryOp, node::AstNode, parser::ParserRes},
 };
@@ -176,17 +176,21 @@ impl<'a> Parser<'a> {
 
                         msg: "unclosed parenthesized expression".into(),
 
-                        primary: Label {
-                            span: Span::new(start, self.peek(0).span.end),
-                            msg: "expected ')'".into(),
-                            paranthesise: false,
-                        },
-
-                        secondary: vec![Label {
-                            span: open_paren_span,
-                            msg: "'(' opened here".into(),
-                            paranthesise: false,
-                        }],
+                        location: Span::new(start, next_tok.span.end),
+                        labels: vec![
+                            Label {
+                                span: Span::new(start, next_tok.span.end),
+                                msg: "expected ')'".into(),
+                                paranthesise: false,
+                                kind: LabelKind::Primary,
+                            },
+                            Label {
+                                span: open_paren_span,
+                                msg: "'(' opened here".into(),
+                                paranthesise: false,
+                                kind: LabelKind::Secondary,
+                            },
+                        ],
 
                         notes: vec![],
                     });
@@ -204,13 +208,17 @@ impl<'a> Parser<'a> {
 
                     msg: "expected expression".into(),
 
-                    primary: Label {
-                        span: Span::new(start, self.peek(0).span.end),
-                        msg: format!("found {}", kind.display()),
-                            paranthesise: false,
-                    },
+                    location: Span::new(start, next_tok.span.end),
 
-                    secondary: vec![],
+                    labels: vec![
+                        Label {
+                            span: Span::new(start, next_tok.span.end),
+                            msg: format!("found {}", kind.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary
+                        },
+                    ],
+
                     notes: vec!["an expression can be a literal, identifier, function call, or parenthesized expression".into(),],
                 });
             }

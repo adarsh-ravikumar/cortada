@@ -1,6 +1,6 @@
 use crate::{
     common::Span,
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     lexer::{Token, TokenKind},
     parser::Parser,
 };
@@ -69,13 +69,13 @@ impl<'a> Parser<'a> {
 
             msg: format!("expected {name}"),
 
-            primary: Label {
+            location: self.diagnostic_span(cur),
+            labels: vec![Label {
                 span: self.diagnostic_span(cur),
                 msg: format!("found '{}'", cur.kind.display()),
                 paranthesise: false,
-            },
-
-            secondary: vec![],
+                kind: LabelKind::Primary,
+            }],
 
             notes: vec![],
         })
@@ -93,13 +93,13 @@ impl<'a> Parser<'a> {
 
             msg: format!("expected '{}'", kind.display()),
 
-            primary: Label {
+            location: self.diagnostic_span(cur),
+            labels: vec![Label {
                 span: self.diagnostic_span(cur),
                 msg: format!("found '{}'", cur.kind.display()),
                 paranthesise: false,
-            },
-
-            secondary: vec![],
+                kind: LabelKind::Primary,
+            }],
 
             notes: vec![],
         })

@@ -1,4 +1,4 @@
-use crate::diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label};
+use crate::diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind};
 use crate::parser::Parser;
 use crate::parser::parser::ParserRes;
 use crate::{
@@ -128,13 +128,13 @@ impl<'a> Parser<'a> {
 
                 msg: "missing body".into(),
 
-                primary: Label {
+                location: Span::new(col_span.start, col_span.end),
+                labels: vec![Label {
                     span: Span::new(col_span.start, col_span.end),
                     msg: "expected indented body before end of file".into(),
                     paranthesise: false,
-                },
-
-                secondary: vec![],
+                    kind: LabelKind::Primary,
+                }],
 
                 notes: vec![],
             });
@@ -148,17 +148,21 @@ impl<'a> Parser<'a> {
 
                 msg: "expected indented block".into(),
 
-                primary: Label {
-                    span: Span::new(col_span.start, col_span.end),
-                    msg: "a block must be indented after ':'".into(),
-                    paranthesise: false,
-                },
-
-                secondary: vec![Label {
-                    span: Span::new(cur_span.start, cur_span.end),
-                    msg: "expected indentation before this statement".into(),
-                    paranthesise: false,
-                }],
+                location: Span::new(col_span.start, col_span.end),
+                labels: vec![
+                    Label {
+                        span: Span::new(col_span.start, col_span.end),
+                        msg: "a block must be indented after ':'".into(),
+                        paranthesise: false,
+                        kind: LabelKind::Primary,
+                    },
+                    Label {
+                        span: Span::new(cur_span.start, cur_span.end),
+                        msg: "expected indentation before this statement".into(),
+                        paranthesise: false,
+                        kind: LabelKind::Secondary,
+                    },
+                ],
 
                 notes: vec![],
             });
@@ -187,14 +191,13 @@ impl<'a> Parser<'a> {
                     class: DiagnosticClass::InvalidLayout,
 
                     msg: "unexpected indentation".into(),
-
-                    primary: Label {
+                    location: tok.span,
+                    labels: vec![Label {
                         span: tok.span,
                         msg: "this line is indented but no new block was started".into(),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec![],
                 });

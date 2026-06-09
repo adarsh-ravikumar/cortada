@@ -1,3 +1,4 @@
+use crate::diagnostic::LabelKind;
 use crate::semantic::SemanticAnalyzer;
 
 use crate::symbol_table::ScopeTable;
@@ -46,21 +47,25 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                             binding_type.display(),
                         ),
 
-                        primary: Label {
-                            span: decl.value_span,
-                            msg: format!("this expression has type `{}`", value_type.display()),
-                            paranthesise: true,
-                        },
-
-                        secondary: vec![Label {
-                            span: ty.span,
-                            msg: format!(
-                                "`{}` declared with type `{}`",
-                                symbol,
-                                binding_type.display()
-                            ),
-                            paranthesise: true,
-                        }],
+                        location: decl.value_span,
+                        labels: vec![
+                            Label {
+                                span: decl.value_span,
+                                msg: format!("this expression has type `{}`", value_type.display()),
+                                paranthesise: true,
+                                kind: LabelKind::Primary,
+                            },
+                            Label {
+                                span: ty.span,
+                                msg: format!(
+                                    "`{}` declared with type `{}`",
+                                    symbol,
+                                    binding_type.display()
+                                ),
+                                paranthesise: true,
+                                kind: LabelKind::Secondary,
+                            },
+                        ],
 
                         notes: vec![],
                     });
@@ -105,13 +110,13 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
 
                     msg: format!("cannot assign to undefined identifier `{}`", symbol),
 
-                    primary: Label {
+                    location: assign.name,
+                    labels: vec![Label {
                         span: assign.name,
                         msg: "assignment target is not defined".into(),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec!["variables must be declared before they can be assigned to".into()],
                 });
@@ -135,25 +140,29 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                         binding_type.display(),
                     ),
 
-                    primary: Label {
-                        span: assign.value_span,
-                        msg: format!("this expression has type `{}`", value_type.display()),
-                        paranthesise: true,
-                    },
-
-                    secondary: vec![Label {
-                        span: if let Some(span) = binding.type_span {
-                            span
-                        } else {
-                            binding.decl_span
+                    location: assign.value_span,
+                    labels: vec![
+                        Label {
+                            span: assign.value_span,
+                            msg: format!("this expression has type `{}`", value_type.display()),
+                            paranthesise: true,
+                            kind: LabelKind::Primary,
                         },
-                        msg: format!(
-                            "`{}` declared with type `{}`",
-                            symbol,
-                            binding_type.display()
-                        ),
-                        paranthesise: binding.type_span.is_some(),
-                    }],
+                        Label {
+                            span: if let Some(span) = binding.type_span {
+                                span
+                            } else {
+                                binding.decl_span
+                            },
+                            msg: format!(
+                                "`{}` declared with type `{}`",
+                                symbol,
+                                binding_type.display()
+                            ),
+                            paranthesise: binding.type_span.is_some(),
+                            kind: LabelKind::Secondary,
+                        },
+                    ],
 
                     notes: vec![
                         format!("variables retain the type established by their declaration"),

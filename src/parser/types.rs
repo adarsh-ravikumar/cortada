@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     lexer::TokenKind,
     parser::{
         Parser,
@@ -66,13 +66,13 @@ impl<'a> Parser<'a> {
 
                     msg: "expected a type expression".into(),
 
-                    primary: Label {
+                    location: cur_tok.span,
+                    labels: vec![Label {
                         span: cur_tok.span,
                         msg: "expected a type expression here".into(),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec!["a type expression may be a built-in type or an identifier".into()],
                 });

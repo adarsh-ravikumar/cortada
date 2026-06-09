@@ -40,18 +40,27 @@ Types
 
 Control Flow
 ------------
-[ ] Control Flow Annotation
+[x] Control Flow Annotation
 
 Diagnostics
 -----------
 [x] Undefined Identifier
 [x] Type Mismatch
-[ ] Invalid Shadowing (if applicable)
 [ ] Invalid Function Call
 
 
-# order
-4) control flow
-5) functions 
-6) function calls
-7) type alias
+# REMAINING
+* Pretty print tables
+* Warn printing for diagnostics
+* Error recovery by panic handling
+* Function table
+* Function decelerations
+* Paramter scopes
+* Function calls 
+* Function overloading
+* Return statements
+* Break / Continue
+* Control flow analysis
+   - Every path returns
+   - Unreachable code
+   - Definite assignment

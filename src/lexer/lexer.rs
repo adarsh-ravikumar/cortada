@@ -1,6 +1,6 @@
 use crate::{
     common::{IOFile, Span},
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     lexer::{Token, TokenKind},
 };
 
@@ -118,7 +118,7 @@ impl<'a> Lexer<'a> {
     fn handle_comment(&mut self, start: usize) -> Result<(), Diagnostic> {
         // multi-line
         if self.peek(0) == b'~' && self.peek(1) == b'~' {
-            let start: Span = Span::new(start, self.position + 1);
+            let start: Span = Span::new(start, self.position + 2);
 
             self.advance_by(2);
 
@@ -128,16 +128,21 @@ impl<'a> Lexer<'a> {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::UnmatchedDelimiter,
                         msg: "unclosed multi-line comment".into(),
-                        primary: Label {
-                            span: Span::new(self.position - 1, self.position - 1),
-                            msg: "expected closing '~~~' before end of file".into(),
-                            paranthesise: false,
-                        },
-                        secondary: vec![Label {
-                            span: start,
-                            msg: "comment started here".into(),
-                            paranthesise: false,
-                        }],
+                        location: Span::new(self.position - 1, self.position - 1),
+                        labels: vec![
+                            Label {
+                                span: Span::new(self.position - 1, self.position - 1),
+                                msg: "expected closing '~~~' before end of file".into(),
+                                kind: LabelKind::Primary,
+                                paranthesise: false,
+                            },
+                            Label {
+                                span: start,
+                                msg: "comment started here".into(),
+                                kind: LabelKind::Secondary,
+                                paranthesise: false,
+                            },
+                        ],
                         notes: vec!["multi-line comments must be terminated with '~~~'".into()],
                     });
                 }
@@ -306,12 +311,13 @@ impl<'a> Lexer<'a> {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::UnexpectedChar,
                         msg: "unexpected character '!'".into(),
-                        primary: Label {
+                        location: Span::new(start, start),
+                        labels: vec![Label {
                             span: Span::new(start, start),
                             msg: "'!' is not a valid token".into(),
+                            kind: LabelKind::Primary,
                             paranthesise: false,
-                        },
-                        secondary: vec![],
+                        }],
                         notes: vec!["if you meant not-equal, use '!='".into()],
                     });
                 }
@@ -333,12 +339,13 @@ impl<'a> Lexer<'a> {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::UnexpectedChar,
                     msg: format!("unexpected character '{}'", char::from(ch)),
-                    primary: Label {
+                    location: Span::new(start, start),
+                    labels: vec![Label {
                         span: Span::new(start, start),
                         msg: format!("'{}' is not a valid token", char::from(ch)),
+                        kind: LabelKind::Primary,
                         paranthesise: false,
-                    },
-                    secondary: vec![],
+                    }],
                     notes: vec![],
                 });
             }
@@ -372,12 +379,13 @@ impl<'a> Lexer<'a> {
                             severity: DiagnosticSeverity::Error,
                             class: DiagnosticClass::InvalidLayout,
                             msg: format!("inconsistent use of tabs and spaces in indentation"),
-                            primary: Label {
+                            location: Span::new(start, self.position),
+                            labels: vec![Label {
                                 span: Span::new(start, self.position),
                                 msg: format!("indentation contains both tabs and spaces"),
                                 paranthesise: false,
-                            },
-                            secondary: vec![],
+                                kind: LabelKind::Primary,
+                            }],
                             notes: vec!["use only tabs or only spaces for indentation".into()],
                         });
                     }
@@ -420,13 +428,13 @@ impl<'a> Lexer<'a> {
 
                     msg: "invalid indentation level".into(),
 
-                    primary: Label {
+                    location: Span::new(start, self.position),
+                    labels: vec![Label {
                         span: Span::new(start, self.position),
                         msg: format!("indentation level is {indent}"),
+                        kind: LabelKind::Primary,
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                    }],
 
                     notes: vec![format!(
                         "expected one of: {}",
@@ -489,20 +497,25 @@ impl<'a> Lexer<'a> {
 
                 msg: "unclosed delimiter".into(),
 
-                primary: Label {
-                    span: Span::new(eof_pos, eof_pos),
-                    msg: format!(
-                        "expected '{}' before end of file",
-                        char::from(Delimiter::pair(open.ch))
-                    ),
-                    paranthesise: false,
-                },
+                location: Span::new(eof_pos, eof_pos),
 
-                secondary: vec![Label {
-                    span: Span::new(open.start, open.start + 1),
-                    msg: format!("'{}' opened here", char::from(open.ch)),
-                    paranthesise: false,
-                }],
+                labels: vec![
+                    Label {
+                        span: Span::new(eof_pos, eof_pos),
+                        msg: format!(
+                            "expected '{}' before end of file",
+                            char::from(Delimiter::pair(open.ch))
+                        ),
+                        kind: LabelKind::Primary,
+                        paranthesise: false,
+                    },
+                    Label {
+                        span: Span::new(open.start, open.start + 1),
+                        msg: format!("'{}' opened here", char::from(open.ch)),
+                        kind: LabelKind::Secondary,
+                        paranthesise: false,
+                    },
+                ],
 
                 notes: vec![],
             });
@@ -517,12 +530,14 @@ impl<'a> Lexer<'a> {
             severity: DiagnosticSeverity::Error,
             class: DiagnosticClass::UnmatchedDelimiter,
             msg: "Closing delimiter without matching opening delimiter".into(),
-            primary: Label {
+            location: Span::new(got.start, got.start),
+
+            labels: vec![Label {
                 span: Span::new(got.start, got.start),
                 msg: format!("Found '{}'", char::from(got.ch)),
                 paranthesise: false,
-            },
-            secondary: vec![],
+                kind: LabelKind::Primary,
+            }],
             notes: vec![],
         }
     }
@@ -536,16 +551,21 @@ impl<'a> Lexer<'a> {
                 char::from(Delimiter::pair(expected.ch)),
                 char::from(got.ch)
             ),
-            primary: Label {
-                span: Span::new(got.start, got.start),
-                msg: format!("expected '{}'", char::from(Delimiter::pair(expected.ch))),
-                paranthesise: false,
-            },
-            secondary: vec![Label {
-                span: Span::new(expected.start, expected.start),
-                msg: format!("'{}' opened here", char::from(expected.ch)),
-                paranthesise: false,
-            }],
+            location: Span::new(got.start, got.start),
+            labels: vec![
+                Label {
+                    span: Span::new(got.start, got.start),
+                    msg: format!("expected '{}'", char::from(Delimiter::pair(expected.ch))),
+                    paranthesise: false,
+                    kind: LabelKind::Primary,
+                },
+                Label {
+                    span: Span::new(expected.start, expected.start),
+                    msg: format!("'{}' opened here", char::from(expected.ch)),
+                    paranthesise: false,
+                    kind: LabelKind::Secondary,
+                },
+            ],
             notes: vec![],
         }
     }

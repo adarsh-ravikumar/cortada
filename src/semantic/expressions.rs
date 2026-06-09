@@ -1,3 +1,4 @@
+use crate::diagnostic::LabelKind;
 use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
 use crate::symbol_table::ScopeTable;
@@ -107,27 +108,30 @@ impl<'a> SemanticAnalyzer<'a> {
                     rhs_type.display()
                 ),
 
-                primary: Label {
-                    span: op.span,
-                    msg: format!(
-                        "'{}' is not defined for operands of type '{}' and '{}'",
-                        op.operator,
-                        lhs_type.display(),
-                        rhs_type.display()
-                    ),
-                    paranthesise: false,
-                },
-
-                secondary: vec![
+                location: op.span,
+                labels: vec![
+                    Label {
+                        span: op.span,
+                        msg: format!(
+                            "'{}' is not defined for operands of type '{}' and '{}'",
+                            op.operator,
+                            lhs_type.display(),
+                            rhs_type.display()
+                        ),
+                        paranthesise: false,
+                        kind: LabelKind::Primary,
+                    },
                     Label {
                         span: lhs_span,
                         msg: format!("left-hand side has type '{}'", lhs_type.display(),),
                         paranthesise: true,
+                        kind: LabelKind::Secondary,
                     },
                     Label {
                         span: rhs_span,
                         msg: format!("right-hand side has type '{}'", rhs_type.display(),),
                         paranthesise: true,
+                        kind: LabelKind::Secondary,
                     },
                 ],
 
@@ -182,21 +186,25 @@ impl<'a> SemanticAnalyzer<'a> {
                     operand_type.display(),
                 ),
 
-                primary: Label {
-                    span: op.span,
-                    msg: format!(
-                        "'{}' is not defined for '{}'",
-                        op.operator,
-                        operand_type.display(),
-                    ),
-                    paranthesise: false,
-                },
-
-                secondary: vec![Label {
-                    span: operand_span,
-                    msg: format!("operand has type '{}'", operand_type.display(),),
-                    paranthesise: true,
-                }],
+                location: op.span,
+                labels: vec![
+                    Label {
+                        span: op.span,
+                        msg: format!(
+                            "'{}' is not defined for '{}'",
+                            op.operator,
+                            operand_type.display(),
+                        ),
+                        paranthesise: false,
+                        kind: LabelKind::Primary,
+                    },
+                    Label {
+                        span: operand_span,
+                        msg: format!("operand has type '{}'", operand_type.display(),),
+                        paranthesise: true,
+                        kind: LabelKind::Secondary,
+                    },
+                ],
 
                 notes: vec![],
             });
@@ -224,14 +232,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     class: DiagnosticClass::UndefinedIdentifier,
 
                     msg: format!("use of undefined identifier `{}`", symbol),
-
-                    primary: Label {
+                    location: name,
+                    labels: vec![Label {
                         span: name,
                         msg: "identifier is not defined".into(),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec!["identifiers must be declared before they can be used".into()],
                 });

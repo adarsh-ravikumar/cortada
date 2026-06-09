@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     lexer::TokenKind,
     parser::{Parser, node::AstNode, parser::ParserRes},
 };
@@ -42,13 +42,14 @@ impl<'a> Parser<'a> {
 
                     msg: "unexpected indentation".into(),
 
-                    primary: Label {
+                    location: self.peek(0).span,
+
+                    labels: vec![Label {
                         span: self.peek(0).span,
                         msg: "no block was started here".into(),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec![],
                 });
@@ -86,13 +87,13 @@ impl<'a> Parser<'a> {
 
                     msg: "unexpected token after 'break'".into(),
 
-                    primary: Label {
+                    location: self.peek(0).span,
+                    labels: vec![Label {
                         span: self.peek(0).span,
                         msg: format!("found {}", t.display()),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec!["'break' does not accept an expression or value".into()],
                 });
@@ -116,13 +117,13 @@ impl<'a> Parser<'a> {
 
                     msg: "unexpected token after 'continue'".into(),
 
-                    primary: Label {
+                    location: self.peek(0).span,
+                    labels: vec![Label {
                         span: self.peek(0).span,
                         msg: format!("found {}", t.display()),
                         paranthesise: false,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec!["'continue' does not accept an expression or value".into()],
                 });

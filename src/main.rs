@@ -24,12 +24,14 @@ fn main() {
         Err(msg) => return println!("{msg}"),
     };
 
+    let mut diag_renderer = DiagnosticRenderer::new(&file);
+
     let mut lexer = Lexer::new(&file);
 
     let toks = match lexer.tokenize() {
         Ok(t) => t,
-        Err(diag) => {
-            let report = DiagnosticRenderer::render(diag, &file);
+        Err(mut diag) => {
+            let report = diag_renderer.render(&mut diag);
             println!("\n\n{report}");
             return;
         }
@@ -42,8 +44,8 @@ fn main() {
 
     let ast = match parser.parse() {
         Ok(a) => a,
-        Err(diag) => {
-            let report = DiagnosticRenderer::render(diag, &file);
+        Err(mut diag) => {
+            let report = diag_renderer.render(&mut diag);
             println!("\n\n{report}");
             return;
         }
@@ -57,8 +59,8 @@ fn main() {
 
     let annotated_tree = match analyzer.create_annotated_tree(ast) {
         Ok(a) => a,
-        Err(diag) => {
-            let report = DiagnosticRenderer::render(diag, &file);
+        Err(mut diag) => {
+            let report = diag_renderer.render(&mut diag);
             println!("\n\n{report}");
             return;
         }

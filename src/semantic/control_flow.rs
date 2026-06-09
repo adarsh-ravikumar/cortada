@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     parser::{AstNode, AstNodeKind, IfStatement, WhileStatement},
     semantic::{
         ElifAnnotation, ExpressionAnnotation, IfAnnotation, SemanticAnalyzer, WhileAnnotation,
@@ -28,14 +28,14 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                         "condition must evaluate to a truthy value, found type `{}`",
                         condition_type.display()
                     ),
+                    location: condition_span,
 
-                    primary: Label {
+                    labels: vec![Label {
                         span: condition_span,
                         msg: format!("this expression has type `{}`", condition_type.display()),
                         paranthesise: true,
-                    },
-
-                    secondary: vec![],
+                        kind: LabelKind::Primary,
+                    }],
 
                     notes: vec![
         "conditions may only evaluate to values that can be interpreted as true or false".into(),
