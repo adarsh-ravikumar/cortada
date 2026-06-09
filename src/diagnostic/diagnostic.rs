@@ -1,8 +1,17 @@
-use crate::common::Span;
+use crate::{common::Span, utils::Style};
 
 pub enum DiagnosticSeverity {
     Warn,
     Error,
+}
+
+impl DiagnosticSeverity {
+    pub fn color(&self) -> &str {
+        match self {
+            Self::Warn => Style::BRIGHT_YELLOW,
+            Self::Error => Style::BRIGHT_RED,
+        }
+    }
 }
 
 pub enum DiagnosticClass {
@@ -44,9 +53,15 @@ impl DiagnosticClass {
     }
 }
 
+pub enum LabelKind {
+    Primary,
+    Secondary,
+}
+
 pub struct Label {
     pub span: Span,
     pub msg: String,
+    pub kind: LabelKind,
     pub paranthesise: bool,
 }
 
@@ -56,8 +71,8 @@ pub struct Diagnostic {
 
     pub msg: String,
 
-    pub primary: Label,
-    pub secondary: Vec<Label>,
+    pub location: Span,
 
+    pub labels: Vec<Label>,
     pub notes: Vec<String>,
 }
