@@ -29,7 +29,7 @@ pub struct VarAssignStatement {
 #[derive(Debug)]
 pub struct FnStatement {
     pub name: Span,
-    pub return_type: Option<Span>,
+    pub return_type: Option<Box<AstNode>>,
     pub params: Vec<Param>,
     pub body: Box<AstNode>,
 }
@@ -140,6 +140,8 @@ pub enum AstNodeKind {
     Call(CallExpr),
 
     Atom(AtomKind),
+
+    Error,
 }
 
 // Node
@@ -150,6 +152,13 @@ pub struct AstNode {
 }
 
 impl AstNode {
+    pub fn error() -> Box<Self> {
+        Box::new(Self {
+            kind: AstNodeKind::Error,
+            span: Span::new(0, 0),
+        })
+    }
+
     pub fn program(statements: Box<AstNode>, start: usize, end: usize) -> Box<Self> {
         Box::new(Self {
             kind: AstNodeKind::Program(Program { statements }),
@@ -195,7 +204,7 @@ impl AstNode {
 
     pub fn fn_stmt(
         name: Span,
-        return_type: Option<Span>,
+        return_type: Option<Box<AstNode>>,
         params: Vec<Param>,
         body: Box<AstNode>,
         start: usize,

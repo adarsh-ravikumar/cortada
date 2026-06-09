@@ -6,35 +6,85 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_expression(&mut self) -> ParserRes {
+    pub fn parse_expression(&mut self) -> ParserRes {
         self.parse_or_expression()
     }
 
-    pub(crate) fn parse_binary_expr(
+    fn is_in_atom_synchronize_set(&self, kind: TokenKind) -> bool {
+        matches!(
+            kind,
+            TokenKind::RightParen
+                | TokenKind::RightBracket
+                | TokenKind::Comma
+                | TokenKind::Colon
+                | TokenKind::Dedent
+                | TokenKind::Newline
+                | TokenKind::EOF
+        )
+    }
+
+    pub fn parse_binary_expr(
         &mut self,
         lhs_fn: fn(&mut Self) -> ParserRes,
         rhs_fn: fn(&mut Self) -> ParserRes,
         pattern: &[TokenKind],
     ) -> ParserRes {
         let start = self.peek(0).span.start;
-        let mut lhs = lhs_fn(self)?;
+        let mut lhs = lhs_fn(self);
 
         while let Some(tok) = self.matches_any(pattern) {
             let op_span = tok.span;
+
             let op = BinaryOp::from(tok.kind);
+
             self.advance();
 
-            let rhs = rhs_fn(self)?;
+            // if the atom synchronizes using these tokens
+            // none of them must be consumed by any members as the first token
+            // which means we can guarantee that the rhs is bound to fail
+            if self.is_in_atom_synchronize_set(self.peek(0).kind) {
+                // this is guaranteed to fail
+                // so we emit failure here.
+                self.diagnostics.push(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::ExpectedExpression,
+
+                    msg: format!("expected operand after '{}'", op.to_string()),
+
+                    location: Span::new(start, self.peek(0).span.end),
+
+                    labels: vec![
+                        Label {
+                            span: Span::new(self.peek(0).span.start, self.peek(0).span.end),
+                            msg: format!("found {}", self.peek(0).kind.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        },
+                        Label {
+                            span: op_span,
+                            msg: format!("'{}' here", op.to_string()),
+                            paranthesise: false,
+                            kind: LabelKind::Secondary,
+                        },
+                    ],
+
+                    notes: vec![],
+                });
+
+                return AstNode::error();
+            }
+
+            let rhs = rhs_fn(self);
 
             let end = rhs.span.end;
 
             lhs = AstNode::binary(lhs, rhs, op, op_span, start, end)
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    pub(crate) fn parse_or_expression(&mut self) -> ParserRes {
+    pub fn parse_or_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_and_expression,
             Self::parse_and_expression,
@@ -42,7 +92,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    pub(crate) fn parse_and_expression(&mut self) -> ParserRes {
+    pub fn parse_and_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_not_expression,
             Self::parse_not_expression,
@@ -50,7 +100,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    pub(crate) fn parse_not_expression(&mut self) -> ParserRes {
+    pub fn parse_not_expression(&mut self) -> ParserRes {
         let start = self.peek(0).span.start;
 
         if let Some(tok) = self.matches(TokenKind::KwrdNot) {
@@ -59,17 +109,52 @@ impl<'a> Parser<'a> {
 
             self.advance();
 
-            let operand = self.parse_not_expression()?;
+            // if the atom synchronizes using these tokens
+            // none of them must be consumed by any members as the first token
+            // which means we can guarantee that the rhs is bound to fail
+            if self.is_in_atom_synchronize_set(self.peek(0).kind) {
+                // this is guaranteed to fail
+                // so we emit failure here.
+                self.diagnostics.push(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::ExpectedExpression,
+
+                    msg: "expected operand after 'not'".into(),
+
+                    location: Span::new(start, self.peek(0).span.end),
+
+                    labels: vec![
+                        Label {
+                            span: Span::new(self.peek(0).span.start, self.peek(0).span.end),
+                            msg: format!("found {}", self.peek(0).kind.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        },
+                        Label {
+                            span: op_span,
+                            msg: "'not' here".into(),
+                            paranthesise: false,
+                            kind: LabelKind::Secondary,
+                        },
+                    ],
+
+                    notes: vec![],
+                });
+
+                return AstNode::error();
+            }
+
+            let operand = self.parse_not_expression();
 
             let end = operand.span.end;
 
-            return Ok(AstNode::unary(op, op_span, operand, start, end));
+            AstNode::unary(op, op_span, operand, start, end);
         }
 
         self.parse_boolean_expression()
     }
 
-    pub(crate) fn parse_boolean_expression(&mut self) -> ParserRes {
+    pub fn parse_boolean_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_arithmetic_expression,
             Self::parse_arithmetic_expression,
@@ -84,7 +169,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    pub(crate) fn parse_arithmetic_expression(&mut self) -> ParserRes {
+    pub fn parse_arithmetic_expression(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_term,
             Self::parse_term,
@@ -92,7 +177,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    pub(crate) fn parse_term(&mut self) -> ParserRes {
+    pub fn parse_term(&mut self) -> ParserRes {
         self.parse_binary_expr(
             Self::parse_factor,
             Self::parse_factor,
@@ -100,7 +185,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    pub(crate) fn parse_factor(&mut self) -> ParserRes {
+    pub fn parse_factor(&mut self) -> ParserRes {
         let start = self.peek(0).span.start;
 
         if let Some(tok) = self.matches_any(&[TokenKind::Plus, TokenKind::Hyphen]) {
@@ -109,30 +194,65 @@ impl<'a> Parser<'a> {
 
             self.advance();
 
-            let operand = self.parse_factor()?;
+            // if the atom synchronizes using these tokens
+            // none of them must be consumed by any members as the first token
+            // which means we can guarantee that the rhs is bound to fail
+            if self.is_in_atom_synchronize_set(self.peek(0).kind) {
+                // this is guaranteed to fail
+                // so we emit failure here.
+                self.diagnostics.push(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::ExpectedExpression,
+
+                    msg: format!("expected operand after '{}'", op.to_string()),
+
+                    location: Span::new(start, self.peek(0).span.end),
+
+                    labels: vec![
+                        Label {
+                            span: Span::new(self.peek(0).span.start, self.peek(0).span.end),
+                            msg: format!("found {}", self.peek(0).kind.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        },
+                        Label {
+                            span: op_span,
+                            msg: format!("'{}' here", op.to_string()),
+                            paranthesise: false,
+                            kind: LabelKind::Secondary,
+                        },
+                    ],
+
+                    notes: vec![],
+                });
+
+                return AstNode::error();
+            }
+
+            let operand = self.parse_factor();
 
             let end = operand.span.end;
 
-            return Ok(AstNode::unary(op, op_span, operand, start, end));
+            return AstNode::unary(op, op_span, operand, start, end);
         }
 
         self.parse_postfix()
     }
 
-    pub(crate) fn parse_postfix(&mut self) -> ParserRes {
-        let mut operand = self.parse_atom()?;
+    pub fn parse_postfix(&mut self) -> ParserRes {
+        let mut operand = self.parse_atom();
 
         loop {
             match self.peek(0).kind {
-                TokenKind::LeftParen => operand = self.parse_call_op(operand)?,
+                TokenKind::LeftParen => operand = self.parse_call_op(operand),
                 _ => break,
             }
         }
 
-        Ok(operand)
+        operand
     }
 
-    pub(crate) fn parse_atom(&mut self) -> ParserRes {
+    pub fn parse_atom(&mut self) -> ParserRes {
         let next_tok = self.peek(0);
 
         let start = next_tok.span.start;
@@ -167,10 +287,42 @@ impl<'a> Parser<'a> {
             TokenKind::LeftParen => {
                 let open_paren_span = self.advance().span;
 
-                let node = self.parse_or_expression()?;
+                // empty!
+                if self.peek(0).kind == TokenKind::RightParen {
+                    self.diagnostics.push(Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnmatchedDelimiter,
+
+                        msg: "empty paranthesised expression".into(),
+
+                        location: Span::new(start, next_tok.span.end),
+                        labels: vec![
+                            Label {
+                                span: Span::new(start, next_tok.span.end),
+                                msg: "expected expression, found ')'".into(),
+                                paranthesise: false,
+                                kind: LabelKind::Primary,
+                            },
+                            Label {
+                                span: open_paren_span,
+                                msg: "'(' opened here".into(),
+                                paranthesise: false,
+                                kind: LabelKind::Secondary,
+                            },
+                        ],
+
+                        notes: vec![],
+                    });
+
+                    self.advance();
+
+                    return AstNode::error();
+                }
+
+                let node = self.parse_or_expression();
 
                 if self.matches(TokenKind::RightParen).is_none() {
-                    return Err(Diagnostic {
+                    self.diagnostics.push(Diagnostic {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::UnmatchedDelimiter,
 
@@ -198,33 +350,47 @@ impl<'a> Parser<'a> {
 
                 self.advance();
 
-                return Ok(node);
+                return node;
             }
 
             kind => {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::ExpectedExpression,
+                self.err_and_recover(
+                    Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::ExpectedExpression,
 
-                    msg: "expected expression".into(),
+                        msg: "expected expression".into(),
 
-                    location: Span::new(start, next_tok.span.end),
+                        location: Span::new(start, next_tok.span.end),
 
-                    labels: vec![
-                        Label {
+                        labels: vec![Label {
                             span: Span::new(start, next_tok.span.end),
                             msg: format!("found {}", kind.display()),
                             paranthesise: false,
-                            kind: LabelKind::Primary
-                        },
-                    ],
+                            kind: LabelKind::Primary,
+                        }],
 
-                    notes: vec!["an expression can be a literal, identifier, function call, or parenthesized expression".into(),],
-                });
+                        notes: vec![],
+                    },
+                    |tok| {
+                        matches!(
+                            tok,
+                            TokenKind::RightParen
+                                | TokenKind::RightBracket
+                                | TokenKind::Comma
+                                | TokenKind::Colon
+                                | TokenKind::Dedent
+                                | TokenKind::Newline
+                                | TokenKind::EOF
+                        )
+                    },
+                );
+
+                return AstNode::error();
             }
         };
 
         self.advance();
-        Ok(node)
+        node
     }
 }

@@ -6,13 +6,13 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn peek(&self, by: usize) -> &'a Token {
+    pub fn peek(&self, by: usize) -> &'a Token {
         self.tokens
             .get(self.position + by)
             .unwrap_or(self.tokens.last().unwrap())
     }
 
-    pub(crate) fn advance_by(&mut self, by: usize) -> &'a Token {
+    pub fn advance_by(&mut self, by: usize) -> &'a Token {
         let next = self.peek(0);
 
         if next.kind != TokenKind::EOF {
@@ -22,17 +22,17 @@ impl<'a> Parser<'a> {
         next
     }
 
-    pub(crate) fn advance(&mut self) -> &'a Token {
+    pub fn advance(&mut self) -> &'a Token {
         self.advance_by(1)
     }
 
-    pub(crate) fn skip_newlines(&mut self) {
+    pub fn skip_newlines(&mut self) {
         while self.peek(0).kind == TokenKind::Newline {
             self.advance();
         }
     }
 
-    pub(crate) fn matches_any(&self, pattern: &[TokenKind]) -> Option<&Token> {
+    pub fn matches_any(&self, pattern: &[TokenKind]) -> Option<&Token> {
         let cur = self.peek(0);
         if pattern.contains(&cur.kind) {
             Some(cur)
@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn matches(&self, kind: TokenKind) -> Option<&Token> {
+    pub fn matches(&self, kind: TokenKind) -> Option<&Token> {
         let cur = self.peek(0);
         if cur.kind == kind { Some(cur) } else { None }
     }
@@ -56,38 +56,44 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn expect_identifier(&self, name: &'static str) -> Result<(), Diagnostic> {
+    pub fn expect_identifier(&mut self, name: &'static str) -> bool {
         let cur = self.peek(0);
 
         if cur.kind == TokenKind::Identifier {
-            return Ok(());
+            return true;
         }
 
-        Err(Diagnostic {
-            severity: DiagnosticSeverity::Error,
-            class: DiagnosticClass::ExpectedToken,
+        self.err_and_recover(
+            Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::ExpectedToken,
 
-            msg: format!("expected {name}"),
+                msg: format!("expected {name}"),
 
-            location: self.diagnostic_span(cur),
-            labels: vec![Label {
-                span: self.diagnostic_span(cur),
-                msg: format!("found '{}'", cur.kind.display()),
-                paranthesise: false,
-                kind: LabelKind::Primary,
-            }],
+                location: self.diagnostic_span(cur),
+                labels: vec![Label {
+                    span: self.diagnostic_span(cur),
+                    msg: format!("found '{}'", cur.kind.display()),
+                    paranthesise: false,
+                    kind: LabelKind::Primary,
+                }],
 
-            notes: vec![],
-        })
+                notes: vec![],
+            },
+            |_| true,
+        );
+
+        false
     }
-    pub(crate) fn expect(&self, kind: TokenKind) -> Result<(), Diagnostic> {
+
+    pub fn expect(&mut self, kind: TokenKind) -> bool {
         let cur = self.peek(0);
 
         if cur.kind == kind {
-            return Ok(());
+            return true;
         }
 
-        Err(Diagnostic {
+        self.diagnostics.push(Diagnostic {
             severity: DiagnosticSeverity::Error,
             class: DiagnosticClass::ExpectedToken,
 
@@ -102,6 +108,8 @@ impl<'a> Parser<'a> {
             }],
 
             notes: vec![],
-        })
+        });
+
+        false
     }
 }

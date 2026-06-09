@@ -5,7 +5,10 @@ use crate::{
 
 impl<'a> Parser<'a> {
     pub(crate) fn parse_call_op(&mut self, callee: Box<AstNode>) -> ParserRes {
-        self.expect(TokenKind::LeftParen)?;
+        if !self.expect(TokenKind::LeftParen) {
+            return AstNode::error();
+        }
+
         self.advance();
 
         let start = callee.span.start;
@@ -13,10 +16,10 @@ impl<'a> Parser<'a> {
         let mut args: Vec<Box<AstNode>> = Vec::new();
 
         if self.peek(0).kind == TokenKind::RightParen {
-            return Ok(AstNode::call(callee, args, start, self.advance().span.end));
+            return AstNode::call(callee, args, start, self.advance().span.end);
         }
 
-        args.push(self.parse_expression()?);
+        args.push(self.parse_expression());
 
         while self.peek(0).kind == TokenKind::Comma {
             self.advance();
@@ -25,13 +28,13 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            args.push(self.parse_expression()?);
+            args.push(self.parse_expression());
         }
 
-        self.expect(TokenKind::RightParen)?;
+        self.expect(TokenKind::RightParen);
 
         let end = self.advance().span.end;
 
-        return Ok(AstNode::call(callee, args, start, end));
+        return AstNode::call(callee, args, start, end);
     }
 }

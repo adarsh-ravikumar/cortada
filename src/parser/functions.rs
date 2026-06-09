@@ -10,20 +10,31 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_fn_statement(&mut self) -> ParserRes {
-        self.expect(TokenKind::KwrdFn)?;
+    pub fn parse_fn_statement(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::KwrdFn) {
+            return AstNode::error();
+        }
+
         self.advance();
 
-        self.expect_identifier("function name")?;
+        if !self.expect_identifier("function name") {
+            return AstNode::error();
+        }
+
         let name = self.advance().span;
 
-        self.expect(TokenKind::LeftParen)?;
+        if !self.expect(TokenKind::LeftParen) {
+            return AstNode::error();
+        }
+
         self.advance();
 
         let mut params: Vec<Param> = Vec::new();
 
         if self.peek(0).kind != TokenKind::RightParen {
-            params.push(self.parse_param()?);
+            if let Some(param) = self.parse_param() {
+                params.push(param);
+            }
 
             while self.peek(0).kind == TokenKind::Comma {
                 self.advance();
@@ -32,40 +43,43 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
-                params.push(self.parse_param()?);
+                if let Some(param) = self.parse_param() {
+                    params.push(param);
+                }
             }
         }
 
-        self.expect(TokenKind::RightParen)?;
+        self.expect(TokenKind::RightParen);
         self.advance();
 
-        let mut return_type: Option<Span> = None;
+        let mut return_type: Option<Box<AstNode>> = None;
 
         if self.peek(0).kind == TokenKind::ThinArrow {
             self.advance();
 
-            self.expect_identifier("return type")?;
-            return_type = Some(self.advance().span);
+            return_type = Some(self.parse_type_expression());
         }
 
-        let body = self.parse_suite()?;
+        let body = self.parse_suite();
 
         let start = name.start;
         let end = body.span.end;
 
-        Ok(AstNode::fn_stmt(
-            name,
-            return_type,
-            params,
-            body,
-            start,
-            end,
-        ))
+        AstNode::fn_stmt(name, return_type, params, body, start, end)
     }
 
-    pub(crate) fn parse_param(&mut self) -> Result<Param, Diagnostic> {
-        self.expect_identifier("parameter name")?;
-        let name = self.advance().span;
+    pub fn parse_param(&mut self) -> Option<Param> {
+        let name = if !self.expect_identifier("parameter name") {
+            self.recover(|kind| {
+                matches!(
+                    kind,
+                    TokenKind::Comma | TokenKind::RightParen | TokenKind::EOF | TokenKind::Colon
+                )
+            });
+            self.peek(0).span
+        } else {
+            self.advance().span
+        };
 
         let mut param_type: Option<Box<AstNode>> = None;
 
@@ -74,15 +88,15 @@ impl<'a> Parser<'a> {
         if let Some(_) = self.matches(TokenKind::Colon) {
             self.advance();
 
-            param_type = Some(self.parse_type_expression()?);
+            param_type = Some(self.parse_type_expression());
         }
 
         if let Some(_) = self.matches(TokenKind::Equal) {
             self.advance();
-            default_value = Some(self.parse_expression()?);
+            default_value = Some(self.parse_expression());
         }
 
-        Ok(Param {
+        Some(Param {
             name,
             param_type,
             default_value,

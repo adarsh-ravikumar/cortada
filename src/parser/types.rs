@@ -9,32 +9,32 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_type_expression(&mut self) -> ParserRes {
+    pub fn parse_type_expression(&mut self) -> ParserRes {
         self.parse_type_union()
     }
 
-    pub(crate) fn parse_type_union(&mut self) -> ParserRes {
-        let primary = self.parse_type_primary()?;
+    pub fn parse_type_union(&mut self) -> ParserRes {
+        let primary = self.parse_type_primary();
 
         let start = primary.span.start;
 
         if self.peek(0).kind != TokenKind::Pipe {
-            return Ok(primary);
+            return primary;
         }
 
         let mut variants = vec![primary];
 
         while self.peek(0).kind == TokenKind::Pipe {
             self.advance();
-            variants.push(self.parse_type_primary()?);
+            variants.push(self.parse_type_primary());
         }
 
         let end = variants.last().unwrap().span.end;
 
-        Ok(AstNode::type_union(variants, start, end))
+        AstNode::type_union(variants, start, end)
     }
 
-    pub(crate) fn parse_type_primary(&mut self) -> ParserRes {
+    pub fn parse_type_primary(&mut self) -> ParserRes {
         let cur_tok = self.peek(0);
 
         let start;
@@ -60,27 +60,43 @@ impl<'a> Parser<'a> {
             }
 
             _ => {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::InvalidTypeExpression,
+                self.err_and_recover(
+                    Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::InvalidTypeExpression,
 
-                    msg: "expected a type expression".into(),
+                        msg: "expected a type expression".into(),
 
-                    location: cur_tok.span,
-                    labels: vec![Label {
-                        span: cur_tok.span,
-                        msg: "expected a type expression here".into(),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                        location: cur_tok.span,
+                        labels: vec![Label {
+                            span: cur_tok.span,
+                            msg: "expected a type expression here".into(),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        }],
 
-                    notes: vec!["a type expression may be a built-in type or an identifier".into()],
-                });
+                        notes: vec![
+                            "a type expression may be a built-in type or an identifier".into(),
+                        ],
+                    },
+                    |kind| {
+                        matches!(
+                            kind,
+                            TokenKind::Pipe
+                                | TokenKind::Comma
+                                | TokenKind::RightParen
+                                | TokenKind::Colon
+                                | TokenKind::EOF
+                        )
+                    },
+                );
+
+                return AstNode::error();
             }
         };
 
         self.advance();
 
-        Ok(AstNode::type_primary(kind, start, end))
+        AstNode::type_primary(kind, start, end)
     }
 }

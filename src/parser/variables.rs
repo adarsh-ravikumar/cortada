@@ -4,8 +4,8 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_ident_leading_statement(&mut self) -> ParserRes {
-        self.expect(TokenKind::Identifier)?;
+    pub fn parse_ident_leading_statement(&mut self) -> ParserRes {
+        self.expect(TokenKind::Identifier);
 
         let next_tok = self.peek(1);
 
@@ -16,51 +16,46 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn parse_var_decl(&mut self) -> ParserRes {
-        self.expect(TokenKind::Identifier)?;
+    pub fn parse_var_decl(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::Identifier) {
+            return AstNode::error();
+        }
         let name = self.advance().span;
 
-        self.expect(TokenKind::Colon)?;
+        if !self.expect(TokenKind::Colon) {
+            return AstNode::error();
+        }
         self.advance();
 
         let mut var_type: Option<Box<AstNode>> = None;
 
         if self.peek(0).kind != TokenKind::Equal {
-            var_type = Some(self.parse_type_expression()?);
+            var_type = Some(self.parse_type_expression());
         }
 
-        self.expect(TokenKind::Equal)?;
+        self.expect(TokenKind::Equal);
         self.advance();
 
-        let value = self.parse_expression()?;
+        let value = self.parse_expression();
 
         let start = name.start;
 
-        Ok(AstNode::var_decl(
-            name,
-            var_type,
-            value,
-            start,
-            self.peek(0).span.start,
-        ))
+        AstNode::var_decl(name, var_type, value, start, self.peek(0).span.start)
     }
 
-    pub(crate) fn parse_var_assign(&mut self) -> ParserRes {
-        self.expect(TokenKind::Identifier)?;
+    pub fn parse_var_assign(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::Identifier) {
+            return AstNode::error();
+        }
         let name = self.advance().span;
 
-        self.expect(TokenKind::Equal)?;
+        self.expect(TokenKind::Equal);
         self.advance();
 
-        let value = self.parse_expression()?;
+        let value = self.parse_expression();
 
         let start = name.start;
 
-        Ok(AstNode::var_assign(
-            name,
-            value,
-            start,
-            self.peek(0).span.end,
-        ))
+        AstNode::var_assign(name, value, start, self.peek(0).span.end)
     }
 }

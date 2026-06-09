@@ -5,7 +5,7 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_statements(&mut self) -> ParserRes {
+    pub fn parse_statements(&mut self) -> ParserRes {
         self.skip_newlines();
 
         let mut stmts: Vec<Box<AstNode>> = Vec::new();
@@ -13,17 +13,20 @@ impl<'a> Parser<'a> {
         let start = self.peek(0).span.start;
 
         loop {
-            if let Some(_) = self.matches_any(&[TokenKind::EOF, TokenKind::Dedent]) {
-                return Ok(AstNode::statements(stmts, start, self.peek(0).span.end));
+            if let Some(_) = self.matches(TokenKind::EOF) {
+                return AstNode::statements(stmts, start, self.peek(0).span.end);
+            } else if let Some(_) = self.matches(TokenKind::Dedent) {
+                self.advance();
+                return AstNode::statements(stmts, start, self.peek(0).span.end);
             }
 
-            stmts.push(self.parse_statement()?);
+            stmts.push(self.parse_statement());
 
             self.skip_newlines();
         }
     }
 
-    pub(crate) fn parse_statement(&mut self) -> ParserRes {
+    pub fn parse_statement(&mut self) -> ParserRes {
         self.skip_newlines();
 
         match self.peek(0).kind {
@@ -36,100 +39,136 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier => self.parse_ident_leading_statement(),
 
             TokenKind::Indent => {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::InvalidLayout,
+                self.err_and_recover(
+                    Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::InvalidLayout,
 
-                    msg: "unexpected indentation".into(),
+                        msg: "unexpected indentation".into(),
 
-                    location: self.peek(0).span,
+                        location: self.peek(0).span,
 
-                    labels: vec![Label {
-                        span: self.peek(0).span,
-                        msg: "no block was started here".into(),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                        labels: vec![Label {
+                            span: self.peek(0).span,
+                            msg: "no block was started here".into(),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        }],
 
-                    notes: vec![],
-                });
+                        notes: vec![],
+                    },
+                    |kind| {
+                        matches!(
+                            kind,
+                            TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF
+                        )
+                    },
+                );
+
+                AstNode::error()
             }
+
             _ => self.parse_expression(),
         }
     }
 
-    pub(crate) fn parse_return_statement(&mut self) -> ParserRes {
-        self.expect(TokenKind::KwrdReturn)?;
+    pub fn parse_return_statement(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::KwrdReturn) {
+            return AstNode::error();
+        }
+
         let start = self.advance().span.start;
 
         if self.peek(0).kind == TokenKind::Newline {
-            return Ok(AstNode::return_stmt(None, start, self.peek(0).span.end));
+            return AstNode::return_stmt(None, start, self.peek(0).span.end);
         }
 
-        let expr = self.parse_expression()?;
+        let expr = self.parse_expression();
 
         let end = expr.span.end;
 
-        Ok(AstNode::return_stmt(Some(expr), start, end))
+        AstNode::return_stmt(Some(expr), start, end)
     }
 
-    pub(crate) fn parse_break_statement(&mut self) -> ParserRes {
-        self.expect(TokenKind::KwrdBreak)?;
+    pub fn parse_break_statement(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::KwrdBreak) {
+            return AstNode::error();
+        }
+
         let tok = self.advance();
 
         match self.peek(0).kind {
             TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
 
             t => {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::UnexpectedToken,
+                self.err_and_recover(
+                    Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnexpectedToken,
 
-                    msg: "unexpected token after 'break'".into(),
+                        msg: "unexpected token after 'break'".into(),
 
-                    location: self.peek(0).span,
-                    labels: vec![Label {
-                        span: self.peek(0).span,
-                        msg: format!("found {}", t.display()),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                        location: self.peek(0).span,
+                        labels: vec![Label {
+                            span: self.peek(0).span,
+                            msg: format!("found {}", t.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        }],
 
-                    notes: vec!["'break' does not accept an expression or value".into()],
-                });
+                        notes: vec!["'break' does not accept an expression or value".into()],
+                    },
+                    |kind| {
+                        matches!(
+                            kind,
+                            TokenKind::Newline | TokenKind::EOF | TokenKind::Dedent
+                        )
+                    },
+                );
             }
         }
 
-        Ok(AstNode::break_stmt(tok.span.start, tok.span.end))
+        AstNode::break_stmt(tok.span.start, tok.span.end)
     }
 
-    pub(crate) fn parse_continue_statement(&mut self) -> ParserRes {
-        self.expect(TokenKind::KwrdContinue)?;
+    pub fn parse_continue_statement(&mut self) -> ParserRes {
+        if !self.expect(TokenKind::KwrdContinue) {
+            return AstNode::error();
+        }
+
         let tok = self.advance();
 
         match self.peek(0).kind {
             TokenKind::Newline | TokenKind::Dedent | TokenKind::EOF => {}
 
             t => {
-                return Err(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::UnexpectedToken,
+                self.err_and_recover(
+                    Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        class: DiagnosticClass::UnexpectedToken,
 
-                    msg: "unexpected token after 'continue'".into(),
+                        msg: "unexpected token after 'continue'".into(),
 
-                    location: self.peek(0).span,
-                    labels: vec![Label {
-                        span: self.peek(0).span,
-                        msg: format!("found {}", t.display()),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                        location: self.peek(0).span,
+                        labels: vec![Label {
+                            span: self.peek(0).span,
+                            msg: format!("found {}", t.display()),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        }],
 
-                    notes: vec!["'continue' does not accept an expression or value".into()],
-                });
+                        notes: vec!["'continue' does not accept an expression or value".into()],
+                    },
+                    |kind| {
+                        matches!(
+                            kind,
+                            TokenKind::Newline | TokenKind::EOF | TokenKind::Dedent
+                        )
+                    },
+                );
             }
         }
 
-        Ok(AstNode::continue_stmt(tok.span.start, tok.span.end))
+        AstNode::continue_stmt(tok.span.start, tok.span.end)
     }
 }
