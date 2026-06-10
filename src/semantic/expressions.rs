@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::ScopeTable;
+use crate::symbol_table::{BindingEntry, ScopeTable};
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -22,20 +22,20 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         expression: Box<AstNode>,
         scope: &ScopeTable,
-    ) -> Result<Box<ExpressionAnnotation>, Diagnostic> {
+    ) -> Box<ExpressionAnnotation> {
         let span = expression.span;
 
         let expr = match expression.kind {
             AstNodeKind::Binary(expr) => {
-                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span, scope)?)
+                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span, scope))
             }
 
             AstNodeKind::Unary(expr) => {
-                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span, scope)?)
+                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span, scope))
             }
 
             AstNodeKind::Atom(atom) => {
-                let atom_annotated = self.annotate_atom(atom, span, scope)?;
+                let atom_annotated = self.annotate_atom(atom, span, scope);
                 ExpressionAnnotation::Atom(atom_annotated)
             }
 
@@ -44,7 +44,7 @@ impl<'a> SemanticAnalyzer<'a> {
 
         // do some type checking perhaps
 
-        Ok(Box::new(expr))
+        Box::new(expr)
     }
 
     pub fn annotate_cast(
@@ -69,12 +69,12 @@ impl<'a> SemanticAnalyzer<'a> {
         expr: BinaryExpr,
         span: Span,
         scope: &ScopeTable,
-    ) -> Result<BinaryAnnotation, Diagnostic> {
+    ) -> BinaryAnnotation {
         let lhs_span = expr.lhs.span;
         let rhs_span = expr.rhs.span;
 
-        let mut lhs = self.annotate_expression(expr.lhs, scope)?;
-        let mut rhs = self.annotate_expression(expr.rhs, scope)?;
+        let mut lhs = self.annotate_expression(expr.lhs, scope);
+        let mut rhs = self.annotate_expression(expr.rhs, scope);
 
         let op = BinaryOpAnnotation {
             operator: expr.op,
@@ -86,7 +86,12 @@ impl<'a> SemanticAnalyzer<'a> {
 
         let expr_type;
 
-        if let Some(res) = op.get_result_type(lhs_type, rhs_type) {
+        if matches!(
+            (lhs_type, rhs_type),
+            (TypeKind::Error, _) | (_, TypeKind::Error)
+        ) {
+            expr_type = TypeKind::Error;
+        } else if let Some(res) = op.get_result_type(lhs_type, rhs_type) {
             expr_type = res.clone();
 
             if lhs_type != &res {
@@ -97,7 +102,8 @@ impl<'a> SemanticAnalyzer<'a> {
         }
         // bad operation
         else {
-            return Err(Diagnostic {
+            expr_type = TypeKind::Error;
+            self.diagnostics.push(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::UnsupportedOperator,
 
@@ -139,13 +145,13 @@ impl<'a> SemanticAnalyzer<'a> {
             });
         }
 
-        Ok(BinaryAnnotation {
+        BinaryAnnotation {
             lhs,
             rhs,
             op,
             span,
             expr_type,
-        })
+        }
     }
 
     pub fn annotate_unary_expression(
@@ -153,10 +159,10 @@ impl<'a> SemanticAnalyzer<'a> {
         expr: UnaryExpr,
         span: Span,
         scope: &ScopeTable,
-    ) -> Result<UnaryAnnotation, Diagnostic> {
+    ) -> UnaryAnnotation {
         let operand_span = expr.operand.span;
 
-        let operand = self.annotate_expression(expr.operand, scope)?;
+        let operand = self.annotate_expression(expr.operand, scope);
         let op = UnaryOpAnnotation {
             operator: expr.op,
             span: expr.op_span,
@@ -166,17 +172,18 @@ impl<'a> SemanticAnalyzer<'a> {
 
         let operand_type = operand.get_type();
 
-        if let Some(t) = op.get_result_type(operand_type) {
+        if matches!(operand_type, TypeKind::Error) {
+            expr_type = TypeKind::Error
+        } else if let Some(t) = op.get_result_type(operand_type) {
             expr_type = t;
-        }
-        // try cast
-        else if let Some(t) = op.try_implicit_cast(operand_type) {
+        } else if let Some(t) = op.try_implicit_cast(operand_type) {
             // operand = self.annotate_cast(operand_type.clone(), target_type.clone(), operand);
             expr_type = t
         }
         // bad operation
         else {
-            return Err(Diagnostic {
+            expr_type = TypeKind::Error;
+            self.diagnostics.push(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::UnsupportedOperator,
 
@@ -209,25 +216,22 @@ impl<'a> SemanticAnalyzer<'a> {
                 notes: vec![],
             });
         }
-        Ok(UnaryAnnotation {
+
+        UnaryAnnotation {
             op,
             operand,
             span,
             expr_type,
-        })
+        }
     }
 
-    pub fn annotate_identifier(
-        &mut self,
-        name: Span,
-        scope: &ScopeTable,
-    ) -> Result<AtomAnnotation, Diagnostic> {
+    pub fn annotate_identifier(&mut self, name: Span, scope: &ScopeTable) -> AtomAnnotation {
         let symbol = self.symbol_table.get_symbol(name);
 
         let binding = match scope.get_id(symbol) {
             Some(id) => self.symbol_table.get_binding(id).unwrap(),
             None => {
-                return Err(Diagnostic {
+                self.diagnostics.push(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::UndefinedIdentifier,
 
@@ -242,14 +246,16 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     notes: vec!["identifiers must be declared before they can be used".into()],
                 });
+
+                &BindingEntry::ERRONEOUS
             }
         };
 
-        Ok(AtomAnnotation::Identifier(IdentifierAnnotation {
+        AtomAnnotation::Identifier(IdentifierAnnotation {
             entry: binding.id,
             atom_type: binding.binding_type.clone(),
             span: name,
-        }))
+        })
     }
 
     pub fn annotate_atom(
@@ -257,7 +263,7 @@ impl<'a> SemanticAnalyzer<'a> {
         atom: AtomKind,
         span: Span,
         scope: &ScopeTable,
-    ) -> Result<AtomAnnotation, Diagnostic> {
+    ) -> AtomAnnotation {
         let atom = match atom {
             AtomKind::Integer(value) => AtomAnnotation::Integer(IntegerAnnotation {
                 value,
@@ -282,9 +288,9 @@ impl<'a> SemanticAnalyzer<'a> {
                 atom_type: TypeKind::Builtin(BuiltinType::Null),
             }),
 
-            AtomKind::Identifier => self.annotate_identifier(span, scope)?,
+            AtomKind::Identifier => self.annotate_identifier(span, scope),
         };
 
-        Ok(atom)
+        atom
     }
 }

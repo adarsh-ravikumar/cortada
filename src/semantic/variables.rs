@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::SemanticAnalyzer;
 
-use crate::symbol_table::ScopeTable;
+use crate::symbol_table::{BindingEntry, ScopeTable};
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -16,12 +16,12 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         decl: VarDeclStatement,
         decl_span: Span,
         scope: &mut ScopeTable<'a, 'scope>,
-    ) -> Result<VarDeclAnnotation, Diagnostic> {
+    ) -> VarDeclAnnotation {
         let symbol_span = decl.name;
 
         let symbol = self.symbol_table.get_symbol(symbol_span);
 
-        let mut value = self.annotate_expression(decl.value, scope)?;
+        let mut value = self.annotate_expression(decl.value, scope);
 
         let value_type = value.get_type();
 
@@ -29,14 +29,14 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         let type_span: Option<Span>;
 
         if let Some(ty) = decl.var_type {
-            binding_type = self.annotate_type_expression(ty.kind)?;
+            binding_type = self.annotate_type_expression(ty.kind);
             type_span = Some(ty.span);
 
             if !binding_type.accepts(value_type) {
                 if value_type.try_implicit_cast(&binding_type) {
                     value = self.annotate_cast(value_type.clone(), binding_type.clone(), value);
                 } else {
-                    return Err(Diagnostic {
+                    self.diagnostics.push(Diagnostic {
                         severity: DiagnosticSeverity::Error,
                         class: DiagnosticClass::TypeMismatch,
 
@@ -82,29 +82,29 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
 
         scope.add_symbol(symbol, id);
 
-        Ok(VarDeclAnnotation {
+        VarDeclAnnotation {
             entry: id,
             value: *value,
-        })
+        }
     }
 
     pub fn annotate_var_assign(
         &mut self,
         assign: VarAssignStatement,
         scope: &ScopeTable,
-    ) -> Result<VarAssignAnnotation, Diagnostic> {
+    ) -> VarAssignAnnotation {
         let symbol_span = assign.name;
 
         let symbol = self.symbol_table.get_symbol(symbol_span);
 
-        let mut value = self.annotate_expression(assign.value, scope)?;
+        let mut value = self.annotate_expression(assign.value, scope);
 
         let value_type = value.get_type();
 
         let binding = match scope.get_id(symbol) {
             Some(id) => self.symbol_table.get_binding(id).unwrap(),
             None => {
-                return Err(Diagnostic {
+                self.diagnostics.push(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::UndefinedIdentifier,
 
@@ -120,6 +120,8 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
 
                     notes: vec!["variables must be declared before they can be assigned to".into()],
                 });
+
+                &BindingEntry::ERRONEOUS
             }
         };
 
@@ -129,7 +131,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             if value_type.try_implicit_cast(&binding_type) {
                 value = self.annotate_cast(value_type.clone(), binding_type.clone(), value);
             } else {
-                return Err(Diagnostic {
+                self.diagnostics.push(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::TypeMismatch,
 
@@ -176,9 +178,9 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             }
         }
 
-        Ok(VarAssignAnnotation {
+        VarAssignAnnotation {
             entry_reference: binding.id,
             value: *value,
-        })
+        }
     }
 }

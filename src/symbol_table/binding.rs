@@ -14,6 +14,16 @@ pub struct BindingEntry {
     pub binding_type: TypeKind,
 }
 
+impl BindingEntry {
+    pub const ERRONEOUS: BindingEntry = BindingEntry {
+        id: 0,
+        decl_span: Span { start: 0, end: 0 },
+        symbol_span: Span { start: 0, end: 0 },
+        type_span: None,
+        binding_type: TypeKind::Error,
+    };
+}
+
 pub struct BindingTable {
     table: HashMap<BindingId, BindingEntry>,
 }

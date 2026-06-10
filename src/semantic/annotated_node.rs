@@ -53,6 +53,7 @@ pub enum ExpressionAnnotation {
     Binary(BinaryAnnotation),
     Unary(UnaryAnnotation),
     Cast(CastAnnotation),
+    Error,
 }
 
 impl ExpressionAnnotation {
@@ -62,6 +63,7 @@ impl ExpressionAnnotation {
             Self::Unary(expr) => &expr.expr_type,
             Self::Atom(atom) => atom.get_type(),
             Self::Cast(cast) => &cast.to,
+            Self::Error => &TypeKind::Error,
         }
     }
 }

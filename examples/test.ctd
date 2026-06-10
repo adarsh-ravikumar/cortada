@@ -1,103 +1,32 @@
-fn alpha(x:, y: int | ) -> :
-    if :
-        return
+a := 1
 
-    while true
-        x := 1 +
+if true:
+    b := 2
 
-    y :=
-
-        z := 1
-
-    return 0
-
-fn beta(, x: int, y:) -> bool
-    if true:
-        a :=
-
-    if false
-        b := 2
-
-    while :
+    while true:
         c := 3
 
-    return true
+        if true:
+            d := 4
 
-fn gamma() -> int:
-    x := ()
+            e := 1 + true
 
-    y := 1 + ()
+            f := e
 
-    z := 2 * ()
+        g := d
+        h := e
+        i := f
 
-    if :
-        return 1
+    j := c
 
-    while true:
-        w := 1 +
+k := b
 
-    return 2
+l := a
 
-fn delta(x: int, y: float) -> :
-    return
+m := b + c + d + e + f + g + h + i + j
 
-fn epsilon():
-    if true:
-        if :
-            a :=
+n := l + true
 
-        while :
-            b := 1 +
+o := n
 
-        c := 2
-
-    return
-
-fn zeta() -> bool:
-    x :=
-
-            y := 1
-
-    if true
-        while false
-            z :=
-
-    return false
-
-fn eta(x: int | , y: float) -> int:
-    return 42
-
-fn theta() -> int
-    x := 1
-
-    if :
-        y := 2
-
-    while true:
-        z :=
-
-    return 0
-
-fn iota(x:, y:, z:) -> :
-    return 1 +
-
-fn kappa() -> int:
-    if false:
-        a := 1
-
-    while :
-        b := ()
-
-    return 10
-
-fn omega() -> int:
-    x := 1
-    y := 2
-
-    if true:
-        z := 3
-
-    while false:
-        q := 4
-
-    return x + y + z + q
+p := o + missing

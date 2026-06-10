@@ -264,6 +264,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
             ExpressionAnnotation::Cast(cast) => {
                 self.print_cast(cast, level, is_terminal);
             }
+
+            ExpressionAnnotation::Error => println!("Expression error"),
         }
     }
 

@@ -11,11 +11,13 @@ pub struct SymbolTable<'a> {
 }
 
 impl<'a> SymbolTable<'a> {
+    // ID starts with 1
+    // ID of 0 is erroneous
     pub fn new(source: &'a IOFile) -> Self {
         Self {
             source,
             binding_table: BindingTable::new(),
-            next_id: 0,
+            next_id: 1,
         }
     }
 

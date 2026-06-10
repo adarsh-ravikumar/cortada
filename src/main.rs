@@ -47,26 +47,23 @@ fn main() {
         return;
     }
 
-    println!("ABSTRACT SYNTAX TREE:");
-    AstPrinter::print(&ast, &file);
-    println!("\n");
-    //
-    // let mut analyzer = SemanticAnalyzer::new(&file);
-    //
-    // let annotated_tree = match analyzer.create_annotated_tree(ast) {
-    //     Ok(a) => a,
-    //     Err(mut diag) => {
-    //         let report = diag_renderer.render(&mut diag);
-    //         println!("\n\n{report}");
-    //         return;
-    //     }
-    // };
-    //
-    // println!("ANNOTATED ABSTRACT SYNTAX TREE:");
-    // let printer = AnnotatedTreePrinter {
-    //     symbol_table: &analyzer.symbol_table,
-    // };
-    //
-    // printer.print(&annotated_tree);
-    //
+    // println!("ABSTRACT SYNTAX TREE:");
+    // AstPrinter::print(&ast, &file);
+    // println!("\n");
+
+    let mut analyzer = SemanticAnalyzer::new(&file);
+
+    let annotated_tree = analyzer.create_annotated_tree(ast);
+    if !analyzer.diagnostics.is_empty() {
+        let report = diag_renderer.render(&mut analyzer.diagnostics);
+        println!("{report}");
+        return;
+    }
+
+    println!("ANNOTATED ABSTRACT SYNTAX TREE:");
+    let printer = AnnotatedTreePrinter {
+        symbol_table: &analyzer.symbol_table,
+    };
+
+    printer.print(&annotated_tree);
 }

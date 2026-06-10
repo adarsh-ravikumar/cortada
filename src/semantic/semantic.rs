@@ -9,6 +9,7 @@ use crate::{
 pub struct SemanticAnalyzer<'a> {
     file: &'a IOFile,
     pub symbol_table: SymbolTable<'a>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl<'a> SemanticAnalyzer<'a> {
@@ -16,12 +17,11 @@ impl<'a> SemanticAnalyzer<'a> {
         Self {
             file,
             symbol_table: SymbolTable::new(file),
+            diagnostics: Vec::new(),
         }
     }
-    pub fn create_annotated_tree(
-        &mut self,
-        ast: Box<AstNode>,
-    ) -> Result<AnnotatedTree, Diagnostic> {
+
+    pub fn create_annotated_tree(&mut self, ast: Box<AstNode>) -> AnnotatedTree {
         let kind = ast.kind;
 
         match kind {

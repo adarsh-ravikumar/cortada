@@ -31,11 +31,13 @@ impl BuiltinType {
             Self::Integer => match target {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
                 TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
+                TypeKind::Error => true,
             },
 
             Self::Float => match target {
                 TypeKind::Builtin(ty) => matches!(ty, Self::Float),
                 TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
+                TypeKind::Error => true,
             },
 
             Self::Bool => false,
@@ -55,6 +57,7 @@ impl UnionType {
         match source {
             TypeKind::Builtin(_) => self.variants.contains(source),
             TypeKind::Union(union) => self.variants.is_superset(&union.variants),
+            TypeKind::Error => true,
         }
     }
 
@@ -100,6 +103,7 @@ impl Clone for UnionType {
 pub enum TypeKind {
     Builtin(BuiltinType),
     Union(UnionType),
+    Error,
 }
 
 impl TypeKind {
@@ -115,6 +119,7 @@ impl TypeKind {
         match self {
             TypeKind::Builtin(ty) => ty.display().into(),
             TypeKind::Union(ty) => ty.display(),
+            TypeKind::Error => "error".into(),
         }
     }
 
@@ -122,6 +127,7 @@ impl TypeKind {
         match self {
             TypeKind::Builtin(ty) => ty.try_implicit_cast(target),
             TypeKind::Union(ty) => ty.accepts(target),
+            TypeKind::Error => true,
         }
     }
 
@@ -129,6 +135,7 @@ impl TypeKind {
         match self {
             TypeKind::Builtin(ty) => ty.rank(),
             TypeKind::Union(ty) => ty.rank(),
+            TypeKind::Error => Some(0),
         }
     }
 }
