@@ -12,6 +12,8 @@ impl fmt::Display for Span {
     }
 }
 
+pub static ERRONEOUS_SPAN: Span = Span { start: 0, end: 0 };
+
 impl Span {
     pub fn new(start: usize, end: usize) -> Self {
         Self { start, end }
