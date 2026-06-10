@@ -5,6 +5,8 @@ use crate::{
 
 impl<'a> Parser<'a> {
     pub fn parse_fn_statement(&mut self) -> ParserRes {
+        let start = self.peek(0).span.start;
+
         if !self.expect(TokenKind::KwrdFn) {
             return AstNode::error();
         }
@@ -50,10 +52,9 @@ impl<'a> Parser<'a> {
             return_type = Some(self.parse_type_expression());
         }
 
-        let body = self.parse_suite();
+        let end = self.peek(0).span.end;
 
-        let start = name.start;
-        let end = body.span.end;
+        let body = self.parse_suite();
 
         AstNode::fn_stmt(name, return_type, params, body, start, end)
     }
