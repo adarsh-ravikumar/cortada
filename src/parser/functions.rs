@@ -1,10 +1,6 @@
 use crate::{
     lexer::TokenKind,
-    parser::{
-        Parser,
-        node::{AstNode, Param},
-        parser::ParserRes,
-    },
+    parser::{Parser, node::AstNode, parser::ParserRes},
 };
 
 impl<'a> Parser<'a> {
@@ -27,12 +23,10 @@ impl<'a> Parser<'a> {
 
         self.advance();
 
-        let mut params: Vec<Param> = Vec::new();
+        let mut params: Vec<Box<AstNode>> = Vec::new();
 
         if self.peek(0).kind != TokenKind::RightParen {
-            if let Some(param) = self.parse_param() {
-                params.push(param);
-            }
+            params.push(self.parse_var_decl());
 
             while self.peek(0).kind == TokenKind::Comma {
                 self.advance();
@@ -41,9 +35,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
-                if let Some(param) = self.parse_param() {
-                    params.push(param);
-                }
+                params.push(self.parse_var_decl());
             }
         }
 
@@ -64,40 +56,5 @@ impl<'a> Parser<'a> {
         let end = body.span.end;
 
         AstNode::fn_stmt(name, return_type, params, body, start, end)
-    }
-
-    pub fn parse_param(&mut self) -> Option<Param> {
-        let name = if !self.expect_identifier("parameter name") {
-            self.recover(|kind| {
-                matches!(
-                    kind,
-                    TokenKind::Comma | TokenKind::RightParen | TokenKind::EOF | TokenKind::Colon
-                )
-            });
-            self.peek(0).span
-        } else {
-            self.advance().span
-        };
-
-        let mut param_type: Option<Box<AstNode>> = None;
-
-        let mut default_value: Option<Box<AstNode>> = None;
-
-        if let Some(_) = self.matches(TokenKind::Colon) {
-            self.advance();
-
-            param_type = Some(self.parse_type_expression());
-        }
-
-        if let Some(_) = self.matches(TokenKind::Equal) {
-            self.advance();
-            default_value = Some(self.parse_expression());
-        }
-
-        Some(Param {
-            name,
-            param_type,
-            default_value,
-        })
     }
 }

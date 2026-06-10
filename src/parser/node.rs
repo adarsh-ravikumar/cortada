@@ -30,7 +30,7 @@ pub struct VarAssignStatement {
 pub struct FnStatement {
     pub name: Span,
     pub return_type: Option<Box<AstNode>>,
-    pub params: Vec<VarDeclStatement>,
+    pub params: Vec<Box<AstNode>>,
     pub body: Box<AstNode>,
 }
 
@@ -199,7 +199,7 @@ impl AstNode {
     pub fn fn_stmt(
         name: Span,
         return_type: Option<Box<AstNode>>,
-        params: Vec<VarDeclStatement>,
+        params: Vec<Box<AstNode>>,
         body: Box<AstNode>,
         start: usize,
         end: usize,
