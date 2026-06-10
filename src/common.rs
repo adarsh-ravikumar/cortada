@@ -2,4 +2,4 @@ mod io;
 mod span;
 
 pub use io::IOFile;
-pub use span::Span;
+pub use span::{ERRONEOUS_SPAN, Span};

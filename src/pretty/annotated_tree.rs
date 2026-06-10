@@ -64,6 +64,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
             }
 
             StatementAnnotation::Fn(fn_stmt) => self.print_fn(fn_stmt, level, is_terminal),
+
+            StatementAnnotation::Return(_) => (),
         }
     }
 
@@ -81,7 +83,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
         let leader = Self::generate_field_leader(level + 1, false);
 
-        let entry = self.symbol_table.get_binding(&decl.entry).unwrap();
+        let entry = self.symbol_table.bindings.get(&decl.entry).unwrap();
 
         let name = self.symbol_table.get_symbol(entry.symbol_span);
 
@@ -120,7 +122,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
         let entry = self
             .symbol_table
-            .get_binding(&assign.entry_reference)
+            .bindings
+            .get(&assign.entry_reference)
             .unwrap();
 
         let name = self.symbol_table.get_symbol(entry.symbol_span);
@@ -140,7 +143,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
     fn print_fn(&self, stmt: &FunctionAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
-        let entry = self.symbol_table.get_function(&stmt.entry).unwrap();
+        let entry = self.symbol_table.functions.get(&stmt.entry).unwrap();
 
         println!(
             "{leader}{}{}Function{}{}",
@@ -311,9 +314,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
                 self.print_cast(cast, level, is_terminal);
             }
 
-            ExpressionAnnotation::Null => {
-                println!("NULL")
-            }
+            ExpressionAnnotation::Null => self.print_null(level),
 
             ExpressionAnnotation::Error => println!("Expression error"),
         }
