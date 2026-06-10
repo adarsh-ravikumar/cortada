@@ -1,4 +1,5 @@
 use crate::{
+    common::Span,
     lexer::TokenKind,
     parser::{Parser, node::AstNode, parser::ParserRes},
 };
@@ -22,25 +23,51 @@ impl<'a> Parser<'a> {
         }
         let name = self.advance().span;
 
+        let start = name.start;
+
+        let var_type: Option<Box<AstNode>>;
+
         if !self.expect(TokenKind::Colon) {
             return AstNode::error();
         }
-        self.advance();
 
-        let mut var_type: Option<Box<AstNode>> = None;
+        let value: Option<Box<AstNode>>;
+        let value_span: Option<Span>;
 
-        if self.peek(0).kind != TokenKind::Equal {
+        // "=" expression
+        if self.peek(0).kind == TokenKind::Equal {
+            self.advance();
+            var_type = None;
+
+            let expr = self.parse_expression();
+            value_span = Some(expr.span);
+            value = Some(expr);
+        } else {
+            // type_expression ("=" expression)?
             var_type = Some(self.parse_type_expression());
+
+            if self.peek(0).kind != TokenKind::Equal {
+                value_span = None;
+                value = None;
+            } else {
+                self.advance();
+
+                let expr = self.parse_expression();
+                value_span = Some(expr.span);
+                value = Some(expr);
+            }
+
+            self.advance();
         }
 
-        self.expect(TokenKind::Equal);
-        self.advance();
-
-        let value = self.parse_expression();
-
-        let start = name.start;
-
-        AstNode::var_decl(name, var_type, value, start, self.peek(0).span.start)
+        AstNode::var_decl(
+            name,
+            var_type,
+            value_span,
+            value,
+            start,
+            self.peek(0).span.start,
+        )
     }
 
     pub fn parse_var_assign(&mut self) -> ParserRes {

@@ -15,8 +15,8 @@ pub struct Statements {
 pub struct VarDeclStatement {
     pub name: Span,
     pub var_type: Option<Box<AstNode>>,
-    pub value: Box<AstNode>,
-    pub value_span: Span,
+    pub value: Option<Box<AstNode>>,
+    pub value_span: Option<Span>,
 }
 
 #[derive(Debug)]
@@ -30,15 +30,8 @@ pub struct VarAssignStatement {
 pub struct FnStatement {
     pub name: Span,
     pub return_type: Option<Box<AstNode>>,
-    pub params: Vec<Param>,
+    pub params: Vec<VarDeclStatement>,
     pub body: Box<AstNode>,
-}
-
-#[derive(Debug)]
-pub struct Param {
-    pub name: Span,
-    pub param_type: Option<Box<AstNode>>,
-    pub default_value: Option<Box<AstNode>>,
 }
 
 #[derive(Debug)]
@@ -176,7 +169,8 @@ impl AstNode {
     pub fn var_decl(
         name: Span,
         var_type: Option<Box<AstNode>>,
-        value: Box<AstNode>,
+        value_span: Option<Span>,
+        value: Option<Box<AstNode>>,
         start: usize,
         end: usize,
     ) -> Box<Self> {
@@ -184,7 +178,7 @@ impl AstNode {
             kind: AstNodeKind::VarDecl(VarDeclStatement {
                 name,
                 var_type,
-                value_span: value.span,
+                value_span,
                 value,
             }),
             span: Span::new(start, end),
@@ -205,7 +199,7 @@ impl AstNode {
     pub fn fn_stmt(
         name: Span,
         return_type: Option<Box<AstNode>>,
-        params: Vec<Param>,
+        params: Vec<VarDeclStatement>,
         body: Box<AstNode>,
         start: usize,
         end: usize,

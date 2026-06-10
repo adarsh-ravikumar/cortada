@@ -303,15 +303,17 @@ impl AstPrinter {
                     Self::print_helper(&var_type, file, level + 2);
                 }
 
-                print!(
-                    "{}{}├── {}Value",
-                    Style::BRIGHT_BLACK,
-                    Self::generate_leader(level + 1),
-                    Style::CYAN
-                );
+                if let Some(value) = &stmt.value {
+                    print!(
+                        "{}{}├── {}Value",
+                        Style::BRIGHT_BLACK,
+                        Self::generate_leader(level + 1),
+                        Style::CYAN
+                    );
 
-                print!("{}\n", Style::RESET);
-                Self::print_helper(&stmt.value, file, level + 2);
+                    print!("{}\n", Style::RESET);
+                    Self::print_helper(value, file, level + 2);
+                }
             }
 
             AstNodeKind::VarAssign(stmt) => {
