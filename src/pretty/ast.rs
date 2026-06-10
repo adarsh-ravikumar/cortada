@@ -389,39 +389,7 @@ impl AstPrinter {
                 }
 
                 for param in stmt.params.iter() {
-                    println!(
-                        "{}{}├── {}Name: {}{}{}",
-                        Style::BRIGHT_BLACK,
-                        Self::generate_leader(level + 2),
-                        Style::CYAN,
-                        Style::BRIGHT_YELLOW,
-                        file.view_span(param.name),
-                        Style::RESET
-                    );
-
-                    if let Some(param_type) = &param.param_type {
-                        println!(
-                            "{}{}├── {}Type{}",
-                            Style::BRIGHT_BLACK,
-                            Self::generate_leader(level + 1),
-                            Style::CYAN,
-                            Style::RESET
-                        );
-
-                        Self::print_helper(&param_type, file, level + 2);
-                    }
-
-                    if let Some(v) = &param.default_value {
-                        print!(
-                            "{}{}└── {}Default Value",
-                            Style::BRIGHT_BLACK,
-                            Self::generate_leader(level + 3),
-                            Style::CYAN
-                        );
-
-                        print!("{}\n", Style::RESET);
-                        Self::print_helper(&v, file, level + 4);
-                    }
+                    Self::print_helper(param, file, level + 1);
                 }
 
                 println!(
