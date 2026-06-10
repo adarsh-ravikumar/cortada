@@ -1,12 +1,16 @@
 use crate::{
     common::{IOFile, Span},
-    symbol_table::{BindingId, BindingTable, TypeKind, binding::BindingEntry},
+    symbol_table::{
+        BindingId, BindingTable, FunctionEntry, FunctionTable, TypeKind, binding::BindingEntry,
+    },
 };
 
 pub struct SymbolTable<'a> {
     source: &'a IOFile,
 
     binding_table: BindingTable,
+    function_table: FunctionTable,
+
     next_id: usize,
 }
 
@@ -17,6 +21,7 @@ impl<'a> SymbolTable<'a> {
         Self {
             source,
             binding_table: BindingTable::new(),
+            function_table: FunctionTable::new(),
             next_id: 1,
         }
     }
@@ -44,5 +49,33 @@ impl<'a> SymbolTable<'a> {
 
     pub fn get_binding(&self, id: &usize) -> Option<&BindingEntry> {
         self.binding_table.get(id)
+    }
+
+    pub fn create_function(
+        &mut self,
+        decl_span: Span,
+        symbol_span: Span,
+        params: Vec<TypeKind>,
+        return_type_span: Option<Span>,
+        return_type: TypeKind,
+    ) -> BindingId {
+        let id = self.next_id;
+
+        self.function_table.create(
+            id,
+            decl_span,
+            symbol_span,
+            params,
+            return_type_span,
+            return_type,
+        );
+
+        self.next_id += 1;
+
+        id
+    }
+
+    pub fn get_function(&self, id: &usize) -> Option<&FunctionEntry> {
+        self.function_table.get(id)
     }
 }

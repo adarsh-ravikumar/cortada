@@ -29,20 +29,20 @@ impl BuiltinType {
     pub fn try_implicit_cast(&self, target: &TypeKind) -> bool {
         match self {
             Self::Integer => match target {
-                TypeKind::Builtin(ty) => matches!(ty, Self::Float),
+                TypeKind::Builtin(ty) => matches!(ty, Self::Float | Self::Null),
                 TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
                 TypeKind::Error => true,
             },
 
             Self::Float => match target {
-                TypeKind::Builtin(ty) => matches!(ty, Self::Float),
+                TypeKind::Builtin(ty) => matches!(ty, Self::Float | Self::Null),
                 TypeKind::Union(union) => union.accepts(&TypeKind::Builtin(*self)),
                 TypeKind::Error => true,
             },
 
             Self::Bool => false,
 
-            Self::Null => false,
+            Self::Null => true,
         }
     }
 }
@@ -111,6 +111,9 @@ impl TypeKind {
         match (self, source) {
             (TypeKind::Builtin(lhs), TypeKind::Builtin(rhs)) => lhs == rhs,
             (TypeKind::Union(lhs), _) => lhs.accepts(source),
+            // for now, any type accepts null. nullability syntax yet to be implemented
+            (_, TypeKind::Builtin(BuiltinType::Null)) => true,
+            (TypeKind::Builtin(BuiltinType::Null), _) => true,
             _ => false,
         }
     }
