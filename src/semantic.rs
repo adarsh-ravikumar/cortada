@@ -3,6 +3,7 @@ mod operator;
 
 mod control_flow;
 mod expressions;
+mod function;
 mod semantic;
 mod statements;
 mod types;

@@ -47,28 +47,27 @@ where
     ) -> StatementAnnotation {
         match statement.kind {
             AstNodeKind::Binary(_) | AstNodeKind::Unary(_) => {
-                let expr = *self.annotate_expression(statement, scope);
-                StatementAnnotation::Expression(expr)
+                StatementAnnotation::Expression(*self.annotate_expression(statement, scope))
             }
 
             AstNodeKind::VarDecl(decl) => {
-                let decl = self.annotate_var_decl(decl, statement.span, scope);
-                StatementAnnotation::VarDecl(decl)
+                StatementAnnotation::VarDecl(self.annotate_var_decl(decl, statement.span, scope))
             }
 
             AstNodeKind::VarAssign(assign) => {
-                let assign = self.annotate_var_assign(assign, scope);
-                StatementAnnotation::VarAssign(assign)
+                StatementAnnotation::VarAssign(self.annotate_var_assign(assign, scope))
             }
 
             AstNodeKind::If(stmt) => {
-                let stmt = self.annotate_if_statement(stmt, scope);
-                StatementAnnotation::If(stmt)
+                StatementAnnotation::If(self.annotate_if_statement(stmt, scope))
             }
 
             AstNodeKind::While(stmt) => {
-                let stmt = self.annotate_while_statement(stmt, scope);
-                StatementAnnotation::While(stmt)
+                StatementAnnotation::While(self.annotate_while_statement(stmt, scope))
+            }
+
+            AstNodeKind::Fn(stmt) => {
+                StatementAnnotation::Fn(self.annotate_function(stmt, statement.span, scope))
             }
 
             AstNodeKind::Atom(atom) => {
@@ -76,7 +75,7 @@ where
                 StatementAnnotation::Expression(ExpressionAnnotation::Atom(atom_annotated))
             }
 
-            _ => unreachable!(),
+            _ => panic!("Unexpected statement"),
         }
     }
 }
