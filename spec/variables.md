@@ -3,7 +3,11 @@
 ## Productions
 
 ```text
-var_decl -> IDENTIFIER ":" type_expression? "=" expression
+var_decl -> IDENTIFIER ":"
+          (
+              "=" expression
+            | type_expression ("=" expression)?
+          )
 
 var_assign -> IDENTIFIER "=" expression
 ```
@@ -12,8 +16,8 @@ var_assign -> IDENTIFIER "=" expression
 
 ## References
 
-| Document        | Productions       |
-| --------------- | ----------------- |
+| Document      | Productions     |
+| ------------- | --------------- |
 | `type.md`       | `type_expression` |
 | `expression.md` | `expression`      |
 
