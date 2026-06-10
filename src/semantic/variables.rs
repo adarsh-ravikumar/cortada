@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{ExpressionAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::{BindingEntry, ScopeEntryKind, ScopeTable};
+use crate::symbol_table::ERRONEOUS_BINDING;
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -15,7 +15,6 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         &mut self,
         decl: VarDeclStatement,
         decl_span: Span,
-        scope: &mut ScopeTable<'a, 'scope>,
     ) -> VarDeclAnnotation {
         let symbol_span = decl.name;
 
@@ -32,7 +31,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             type_span = Some(ty.span);
 
             if let Some(val) = decl.value {
-                value = self.annotate_expression(val, scope);
+                value = self.annotate_expression(val);
                 value_span = decl.value_span.unwrap();
             } else {
                 value = Box::new(ExpressionAnnotation::Null);
@@ -42,7 +41,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         // if there is no type expression, then we have to look for the value and infer type
         else {
             type_span = None;
-            value = self.annotate_expression(decl.value.unwrap(), scope);
+            value = self.annotate_expression(decl.value.unwrap());
             binding_type = value.get_type().clone();
             value_span = decl.value_span.unwrap();
         }
@@ -93,50 +92,43 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             .symbol_table
             .create_binding(decl_span, symbol_span, type_span, binding_type);
 
-        scope.add_symbol(symbol, ScopeEntryKind::Binding, id);
-
         VarDeclAnnotation {
             entry: id,
             value: *value,
         }
     }
 
-    pub fn annotate_var_assign(
-        &mut self,
-        assign: VarAssignStatement,
-        scope: &ScopeTable,
-    ) -> VarAssignAnnotation {
+    pub fn annotate_var_assign(&mut self, assign: VarAssignStatement) -> VarAssignAnnotation {
         let symbol_span = assign.name;
 
         let symbol = self.symbol_table.get_symbol(symbol_span);
 
-        let mut value = self.annotate_expression(assign.value, scope);
+        let mut value = self.annotate_expression(assign.value);
 
         let value_type = value.get_type();
 
-        let binding = match scope.get_id(symbol) {
-            Some(id) => self.symbol_table.get_binding(id).unwrap(),
-            None => {
-                self.diagnostics.push(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::UndefinedIdentifier,
+        let mut binding = self.symbol_table.get_binding(symbol);
 
-                    msg: format!("cannot assign to undefined identifier `{}`", symbol),
+        if matches!(binding.binding_type, TypeKind::Error) {
+            self.diagnostics.push(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::UndefinedIdentifier,
 
-                    location: assign.name,
-                    labels: vec![Label {
-                        span: assign.name,
-                        msg: "assignment target is not defined".into(),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                msg: format!("cannot assign to undefined identifier `{}`", symbol),
 
-                    notes: vec!["variables must be declared before they can be assigned to".into()],
-                });
+                location: assign.name,
+                labels: vec![Label {
+                    span: assign.name,
+                    msg: "assignment target is not defined".into(),
+                    paranthesise: false,
+                    kind: LabelKind::Primary,
+                }],
 
-                &BindingEntry::ERRONEOUS
-            }
-        };
+                notes: vec!["variables must be declared before they can be assigned to".into()],
+            });
+
+            binding = &ERRONEOUS_BINDING;
+        }
 
         let binding_type = &binding.binding_type;
 

@@ -1,8 +1,8 @@
 use crate::{
     common::Span,
     parser::{AstNodeKind, FnStatement},
-    semantic::{FunctionAnnotation, SemanticAnalyzer, VarDeclAnnotation},
-    symbol_table::{ScopeEntryKind, ScopeTable, TypeKind},
+    semantic::{ExpressionAnnotation, FunctionAnnotation, SemanticAnalyzer, VarDeclAnnotation},
+    symbol_table::TypeKind,
 };
 
 impl<'a, 'scope> SemanticAnalyzer<'a> {
@@ -10,22 +10,21 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         &mut self,
         fn_stmt: FnStatement,
         decl_span: Span,
-        parent_scope: &mut Box<ScopeTable<'a, 'scope>>,
     ) -> FunctionAnnotation {
-        let mut scope = ScopeTable::new(Some(parent_scope), true);
-        let name = self.symbol_table.get_symbol(fn_stmt.name);
-
         let mut params: Vec<VarDeclAnnotation> = Vec::new();
         let mut param_types: Vec<TypeKind> = Vec::new();
 
         for param in fn_stmt.params {
             match param.kind {
                 AstNodeKind::VarDecl(decl) => {
-                    let param = self.annotate_var_decl(decl, param.span, &mut scope);
+                    let mut param = self.annotate_var_decl(decl, param.span);
+
+                    param.value = ExpressionAnnotation::Null;
 
                     let param_type = if param.entry != 0 {
                         self.symbol_table
-                            .get_binding(&param.entry)
+                            .bindings
+                            .get(&param.entry)
                             .unwrap()
                             .binding_type
                             .clone()
@@ -49,8 +48,9 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             return_type = self.annotate_type_expression(ty.kind);
         }
         // for now, just annotate the body
+
         let body = match fn_stmt.body.kind {
-            AstNodeKind::Statements(stmts) => self.annotate_statements(stmts, &mut scope),
+            AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("body must be statements"),
         };
 
@@ -61,8 +61,6 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             return_type_span,
             return_type,
         );
-
-        parent_scope.add_symbol(name, ScopeEntryKind::Function, entry);
 
         FunctionAnnotation {
             entry,

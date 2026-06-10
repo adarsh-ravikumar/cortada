@@ -52,10 +52,6 @@ Diagnostics
 # REMAINING
 * Pretty print tables
 * Warn printing for diagnostics
-* Error recovery by panic handling
-* Function table
-* Function decelerations
-* Paramter scopes
 * Function calls 
 * Function overloading
 * Return statements

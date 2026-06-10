@@ -1,7 +1,7 @@
 use crate::{
     common::Span,
     semantic::operator::{BinaryOpAnnotation, UnaryOpAnnotation},
-    symbol_table::{BindingId, BuiltinType, FunctionId, TypeKind},
+    symbol_table::{BuiltinType, TypeKind},
 };
 
 pub struct AnnotatedTree {
@@ -18,23 +18,29 @@ pub enum StatementAnnotation {
     If(IfAnnotation),
     While(WhileAnnotation),
     Fn(FunctionAnnotation),
+    Return(ReturnAnnotation),
     Expression(ExpressionAnnotation),
 }
 
 pub struct VarDeclAnnotation {
-    pub entry: BindingId,
+    pub entry: usize,
     pub value: ExpressionAnnotation,
 }
 
 pub struct VarAssignAnnotation {
-    pub entry_reference: BindingId,
+    pub entry_reference: usize,
     pub value: ExpressionAnnotation,
 }
 
 pub struct FunctionAnnotation {
-    pub entry: FunctionId,
+    pub entry: usize,
     pub params: Vec<VarDeclAnnotation>,
     pub body: AnnotatedStatements,
+}
+
+pub struct ReturnAnnotation {
+    pub return_type: TypeKind,
+    pub expr: ExpressionAnnotation,
 }
 
 pub struct IfAnnotation {

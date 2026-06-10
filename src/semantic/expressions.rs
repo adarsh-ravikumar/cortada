@@ -1,7 +1,8 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::{BindingEntry, ScopeTable};
+use crate::symbol_table::ERRONEOUS_BINDING;
+
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -18,31 +19,25 @@ use crate::{
 };
 
 impl<'a> SemanticAnalyzer<'a> {
-    pub fn annotate_expression(
-        &mut self,
-        expression: Box<AstNode>,
-        scope: &ScopeTable,
-    ) -> Box<ExpressionAnnotation> {
+    pub fn annotate_expression(&mut self, expression: Box<AstNode>) -> Box<ExpressionAnnotation> {
         let span = expression.span;
 
         let expr = match expression.kind {
             AstNodeKind::Binary(expr) => {
-                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span, scope))
+                ExpressionAnnotation::Binary(self.annotate_binary_expression(expr, span))
             }
 
             AstNodeKind::Unary(expr) => {
-                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span, scope))
+                ExpressionAnnotation::Unary(self.annotate_unary_expression(expr, span))
             }
 
             AstNodeKind::Atom(atom) => {
-                let atom_annotated = self.annotate_atom(atom, span, scope);
+                let atom_annotated = self.annotate_atom(atom, span);
                 ExpressionAnnotation::Atom(atom_annotated)
             }
 
             _ => panic!("invalid expression"),
         };
-
-        // do some type checking perhaps
 
         Box::new(expr)
     }
@@ -64,17 +59,12 @@ impl<'a> SemanticAnalyzer<'a> {
         }))
     }
 
-    pub fn annotate_binary_expression(
-        &mut self,
-        expr: BinaryExpr,
-        span: Span,
-        scope: &ScopeTable,
-    ) -> BinaryAnnotation {
+    pub fn annotate_binary_expression(&mut self, expr: BinaryExpr, span: Span) -> BinaryAnnotation {
         let lhs_span = expr.lhs.span;
         let rhs_span = expr.rhs.span;
 
-        let mut lhs = self.annotate_expression(expr.lhs, scope);
-        let mut rhs = self.annotate_expression(expr.rhs, scope);
+        let mut lhs = self.annotate_expression(expr.lhs);
+        let mut rhs = self.annotate_expression(expr.rhs);
 
         let op = BinaryOpAnnotation {
             operator: expr.op,
@@ -154,15 +144,10 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    pub fn annotate_unary_expression(
-        &mut self,
-        expr: UnaryExpr,
-        span: Span,
-        scope: &ScopeTable,
-    ) -> UnaryAnnotation {
+    pub fn annotate_unary_expression(&mut self, expr: UnaryExpr, span: Span) -> UnaryAnnotation {
         let operand_span = expr.operand.span;
 
-        let operand = self.annotate_expression(expr.operand, scope);
+        let operand = self.annotate_expression(expr.operand);
         let op = UnaryOpAnnotation {
             operator: expr.op,
             span: expr.op_span,
@@ -225,31 +210,29 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    pub fn annotate_identifier(&mut self, name: Span, scope: &ScopeTable) -> AtomAnnotation {
+    pub fn annotate_identifier(&mut self, name: Span) -> AtomAnnotation {
         let symbol = self.symbol_table.get_symbol(name);
+        let mut binding = self.symbol_table.get_binding(symbol);
 
-        let binding = match scope.get_id(symbol) {
-            Some(id) => self.symbol_table.get_binding(id).unwrap(),
-            None => {
-                self.diagnostics.push(Diagnostic {
-                    severity: DiagnosticSeverity::Error,
-                    class: DiagnosticClass::UndefinedIdentifier,
+        if matches!(binding.binding_type, TypeKind::Error) {
+            self.diagnostics.push(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::UndefinedIdentifier,
 
-                    msg: format!("use of undefined identifier `{}`", symbol),
-                    location: name,
-                    labels: vec![Label {
-                        span: name,
-                        msg: "identifier is not defined".into(),
-                        paranthesise: false,
-                        kind: LabelKind::Primary,
-                    }],
+                msg: format!("use of undefined identifier `{}`", symbol),
+                location: name,
+                labels: vec![Label {
+                    span: name,
+                    msg: "identifier is not defined".into(),
+                    paranthesise: false,
+                    kind: LabelKind::Primary,
+                }],
 
-                    notes: vec!["identifiers must be declared before they can be used".into()],
-                });
+                notes: vec!["identifiers must be declared before they can be used".into()],
+            });
 
-                &BindingEntry::ERRONEOUS
-            }
-        };
+            binding = &ERRONEOUS_BINDING;
+        }
 
         AtomAnnotation::Identifier(IdentifierAnnotation {
             entry: binding.id,
@@ -258,12 +241,7 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    pub fn annotate_atom(
-        &mut self,
-        atom: AtomKind,
-        span: Span,
-        scope: &ScopeTable,
-    ) -> AtomAnnotation {
+    pub fn annotate_atom(&mut self, atom: AtomKind, span: Span) -> AtomAnnotation {
         let atom = match atom {
             AtomKind::Integer(value) => AtomAnnotation::Integer(IntegerAnnotation {
                 value,
@@ -288,7 +266,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 atom_type: TypeKind::Builtin(BuiltinType::Null),
             }),
 
-            AtomKind::Identifier => self.annotate_identifier(span, scope),
+            AtomKind::Identifier => self.annotate_identifier(span),
         };
 
         atom
