@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use crate::{common::Span, symbol_table::TypeKind};
-
-pub type BindingId = usize;
+use crate::{
+    common::{ERRONEOUS_SPAN, Span},
+    symbol_table::TypeKind,
+};
 
 pub struct BindingEntry {
-    pub id: BindingId,
+    pub id: usize,
 
     pub decl_span: Span,
     pub symbol_span: Span,
@@ -14,18 +15,16 @@ pub struct BindingEntry {
     pub binding_type: TypeKind,
 }
 
-impl BindingEntry {
-    pub const ERRONEOUS: BindingEntry = BindingEntry {
-        id: 0,
-        decl_span: Span { start: 0, end: 0 },
-        symbol_span: Span { start: 0, end: 0 },
-        type_span: None,
-        binding_type: TypeKind::Error,
-    };
-}
+pub static ERRONEOUS_BINDING: BindingEntry = BindingEntry {
+    id: 0,
+    decl_span: ERRONEOUS_SPAN,
+    symbol_span: ERRONEOUS_SPAN,
+    type_span: None,
+    binding_type: TypeKind::Error,
+};
 
 pub struct BindingTable {
-    table: HashMap<BindingId, BindingEntry>,
+    table: HashMap<usize, BindingEntry>,
 }
 
 impl BindingTable {
@@ -37,7 +36,7 @@ impl BindingTable {
 
     pub fn create(
         &mut self,
-        id: BindingId,
+        id: usize,
         decl_span: Span,
         symbol_span: Span,
         type_span: Option<Span>,
@@ -55,11 +54,11 @@ impl BindingTable {
         );
     }
 
-    pub fn get(&self, id: &BindingId) -> Option<&BindingEntry> {
+    pub fn get(&self, id: &usize) -> Option<&BindingEntry> {
         self.table.get(id)
     }
 
-    pub fn get_mut(&mut self, id: &BindingId) -> Option<&mut BindingEntry> {
+    pub fn get_mut(&mut self, id: &usize) -> Option<&mut BindingEntry> {
         self.table.get_mut(id)
     }
 }

@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{common::Span, symbol_table::TypeKind};
+use crate::{
+    common::{ERRONEOUS_SPAN, Span},
+    symbol_table::TypeKind,
+};
 
 pub type FunctionId = usize;
 
@@ -18,17 +21,15 @@ pub struct FunctionEntry {
     pub return_type: TypeKind,
 }
 
-impl FunctionEntry {
-    pub const ERRONEOUS: FunctionEntry = FunctionEntry {
-        id: 0,
-        decl_span: Span { start: 0, end: 0 },
-        symbol_span: Span { start: 0, end: 0 },
-        params: Vec::new(),
-        arity: 0,
-        return_type_span: None,
-        return_type: TypeKind::Error,
-    };
-}
+pub static ERRONEOUS_FUNCTION: FunctionEntry = FunctionEntry {
+    id: 0,
+    decl_span: ERRONEOUS_SPAN,
+    symbol_span: ERRONEOUS_SPAN,
+    params: Vec::new(),
+    arity: 0,
+    return_type_span: None,
+    return_type: TypeKind::Error,
+};
 
 pub struct FunctionTable {
     table: HashMap<FunctionId, FunctionEntry>,
