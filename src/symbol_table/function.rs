@@ -7,6 +7,7 @@ use crate::{
 
 pub type FunctionId = usize;
 
+#[derive(PartialEq, Eq)]
 pub struct FunctionEntry {
     pub id: FunctionId,
 

@@ -212,9 +212,9 @@ impl<'a> SemanticAnalyzer<'a> {
 
     pub fn annotate_identifier(&mut self, name: Span) -> AtomAnnotation {
         let symbol = self.symbol_table.get_symbol(name);
-        let mut binding = self.symbol_table.get_binding(symbol);
+        let binding = self.symbol_table.get_binding(symbol);
 
-        if matches!(binding.binding_type, TypeKind::Error) {
+        if binding == &ERRONEOUS_BINDING {
             self.diagnostics.push(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::UndefinedIdentifier,
@@ -230,8 +230,6 @@ impl<'a> SemanticAnalyzer<'a> {
 
                 notes: vec!["identifiers must be declared before they can be used".into()],
             });
-
-            binding = &ERRONEOUS_BINDING;
         }
 
         AtomAnnotation::Identifier(IdentifierAnnotation {

@@ -5,6 +5,7 @@ use crate::{
     symbol_table::TypeKind,
 };
 
+#[derive(PartialEq, Eq)]
 pub struct BindingEntry {
     pub id: usize,
 

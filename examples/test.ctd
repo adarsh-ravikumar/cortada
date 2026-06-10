@@ -1,0 +1,73 @@
+root := 10
+
+if true:
+    ~ shadow outer root
+    root := 20
+
+    if true:
+        ~ erroneous shadow
+        root := true + 1
+
+        a := root
+        b := a + missing1
+
+    c := root
+
+    while true:
+        d := c
+
+        ~ another bad shadow
+        d := false + 2
+
+        e := d
+        f := e + missing2
+
+    g := c
+
+h := root
+
+~ independent failures
+i := true + false
+j := false + true
+
+~ error + undefined identifier
+k := i + missing3
+
+~ shadowing shouldn't poison parent
+x := 1
+
+if true:
+    x := 2
+
+    while true:
+        x := true + 1
+        y := x
+
+    z := x
+
+w := x
+
+~ references to dead locals
+bad1 := a
+bad2 := d
+bad3 := e
+bad4 := f
+bad5 := y
+bad6 := z
+
+~ more independent errors
+m := true + 1
+n := false + 2
+
+o := m + n
+
+p := o + missing4
+
+~ parent variable should remain intact
+alive := 100
+
+if true:
+    alive := true + 1
+    tmp := alive
+
+still_alive := alive
