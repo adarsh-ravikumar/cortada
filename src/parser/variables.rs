@@ -31,6 +31,8 @@ impl<'a> Parser<'a> {
             return AstNode::error();
         }
 
+        self.advance();
+
         let value: Option<Box<AstNode>>;
         let value_span: Option<Span>;
 
@@ -56,8 +58,6 @@ impl<'a> Parser<'a> {
                 value_span = Some(expr.span);
                 value = Some(expr);
             }
-
-            self.advance();
         }
 
         AstNode::var_decl(
