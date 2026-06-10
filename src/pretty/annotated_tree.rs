@@ -2,9 +2,9 @@ use crate::{
     parser::AstNodeKind,
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
-        CastAnnotation, ExpressionAnnotation, FloatAnnotation, IdentifierAnnotation, IfAnnotation,
-        IntegerAnnotation, StatementAnnotation, UnaryAnnotation, VarAssignAnnotation,
-        VarDeclAnnotation, WhileAnnotation,
+        CastAnnotation, ExpressionAnnotation, FloatAnnotation, FunctionAnnotation,
+        IdentifierAnnotation, IfAnnotation, IntegerAnnotation, StatementAnnotation,
+        UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation, WhileAnnotation,
     },
     symbol_table::SymbolTable,
     utils::Style,
@@ -62,6 +62,8 @@ impl<'a> AnnotatedTreePrinter<'a> {
             StatementAnnotation::While(while_stmt) => {
                 self.print_while(while_stmt, level, is_terminal)
             }
+
+            StatementAnnotation::Fn(fn_stmt) => self.print_fn(fn_stmt, level, is_terminal),
         }
     }
 
@@ -133,6 +135,49 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
         println!("{leader}{}value{}", Style::BLUE, Style::RESET,);
         self.print_expression(&assign.value, level + 2, is_terminal);
+    }
+
+    fn print_fn(&self, stmt: &FunctionAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        let entry = self.symbol_table.get_function(&stmt.entry).unwrap();
+
+        println!(
+            "{leader}{}{}Function{}{}",
+            Style::BOLD,
+            Style::MAGENTA,
+            Style::RESET,
+            Style::RESET_BOLD
+        );
+
+        println!(
+            "{}{}{}Return type: {}{}",
+            Style::BRIGHT_BLACK,
+            Self::generate_field_leader(level + 1, false),
+            Style::MAGENTA,
+            Style::RESET,
+            entry.return_type.display()
+        );
+
+        println!(
+            "{}{}{}Params",
+            Style::BRIGHT_BLACK,
+            Self::generate_field_leader(level + 1, false),
+            Style::MAGENTA,
+        );
+
+        for param in stmt.params.iter() {
+            self.print_var_decl(param, level + 2, false);
+        }
+
+        println!(
+            "{}{}{}Body",
+            Style::BRIGHT_BLACK,
+            Self::generate_field_leader(level + 1, false),
+            Style::MAGENTA,
+        );
+
+        self.print_statements(&stmt.body, level + 2, is_terminal);
     }
 
     fn print_if(&self, stmt: &IfAnnotation, level: usize, is_terminal: bool) {
@@ -247,6 +292,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
             self.print_statements(&stmt.else_stmt.as_ref().unwrap(), level + 2, false);
         }
     }
+
     fn print_expression(&self, expr: &ExpressionAnnotation, level: usize, is_terminal: bool) {
         match expr {
             ExpressionAnnotation::Binary(expr) => {
@@ -263,6 +309,10 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
             ExpressionAnnotation::Cast(cast) => {
                 self.print_cast(cast, level, is_terminal);
+            }
+
+            ExpressionAnnotation::Null => {
+                println!("NULL")
             }
 
             ExpressionAnnotation::Error => println!("Expression error"),
