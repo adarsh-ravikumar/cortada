@@ -4,13 +4,10 @@
 
 ```text
 fn_stmt -> "fn" IDENTIFIER
-           "(" (param ("," param)*)? ","? ")"
+           "(" (var_decl ("," var_decl)*)? ","? ")"
            ("->" type_expression)?
            suite
 
-param   -> IDENTIFIER
-           (":" type_expression)?
-           ("=" expression)?
 ```
 
 ---
