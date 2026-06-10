@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::SemanticAnalyzer;
 
-use crate::symbol_table::{BindingEntry, ScopeTable};
+use crate::symbol_table::{BindingEntry, ScopeEntryKind, ScopeTable};
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -80,7 +80,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             .symbol_table
             .create_binding(decl_span, symbol_span, type_span, binding_type);
 
-        scope.add_symbol(symbol, id);
+        scope.add_symbol(symbol, ScopeEntryKind::Binding, id);
 
         VarDeclAnnotation {
             entry: id,
