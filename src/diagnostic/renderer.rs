@@ -282,7 +282,7 @@ impl<'a> DiagnosticRenderer<'a> {
 
         for note in &diag.notes {
             res.push_str(&format!(
-                "{} {}{}={}{} note:{} {}\n",
+                "{} {}{} ={}{} note:{} {}\n",
                 " ".repeat(self.line_num_len),
                 Style::BOLD,
                 Style::BRIGHT_BLACK,

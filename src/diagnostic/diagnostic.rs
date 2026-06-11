@@ -31,6 +31,7 @@ pub enum DiagnosticClass {
     TypeMismatch,
     UnknownType,
     UnsupportedOperator,
+    InvalidControlFlow,
 }
 
 impl DiagnosticClass {
@@ -49,6 +50,7 @@ impl DiagnosticClass {
             Self::TypeMismatch => "E202",
             Self::UnknownType => "E203",
             Self::UnsupportedOperator => "E204",
+            Self::InvalidControlFlow => "E205",
         }
     }
 }

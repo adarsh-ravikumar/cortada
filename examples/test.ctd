@@ -1,73 +1,85 @@
-root := 10
+~ illegal return at global scope
+return
+
+~ illegal break at global scope
+break
+
+~ illegal continue at global scope
+continue
 
 if true:
-    ~ shadow outer root
-    root := 20
+    ~ still not inside a function or loop
+    return
+
+    ~ still not inside a loop
+    break
+
+    continue
+
+while true:
+    ~ legal
+    break
+
+    ~ legal
+    continue
 
     if true:
-        ~ erroneous shadow
-        root := true + 1
+        ~ legal, should see the enclosing loop
+        break
 
-        a := root
-        b := a + missing1
+        ~ legal
+        continue
 
-    c := root
+        ~ illegal, no enclosing function
+        return
 
-    while true:
-        d := c
+fn foo():
+    ~ legal
+    return
 
-        ~ another bad shadow
-        d := false + 2
+fn bar():
+    if true:
+        ~ legal
+        return
 
-        e := d
-        f := e + missing2
+        ~ illegal, no loop
+        break
 
-    g := c
-
-h := root
-
-~ independent failures
-i := true + false
-j := false + true
-
-~ error + undefined identifier
-k := i + missing3
-
-~ shadowing shouldn't poison parent
-x := 1
-
-if true:
-    x := 2
+        continue
 
     while true:
-        x := true + 1
-        y := x
+        ~ all legal
+        break
+        continue
+        return
 
-    z := x
-
-w := x
-
-~ references to dead locals
-bad1 := a
-bad2 := d
-bad3 := e
-bad4 := f
-bad5 := y
-bad6 := z
-
-~ more independent errors
-m := true + 1
-n := false + 2
-
-o := m + n
-
-p := o + missing4
-
-~ parent variable should remain intact
-alive := 100
+fn baz():
+    while true:
+        if true:
+            ~ all legal
+            break
+            continue
+            return
 
 if true:
-    alive := true + 1
-    tmp := alive
+    while true:
+        ~ legal because we're inside a loop
+        break
+        continue
 
-still_alive := alive
+        ~ illegal because we're not inside a function
+        return
+
+fn qux():
+    if true:
+        while true:
+            if true:
+                ~ all legal
+                break
+                continue
+                return
+
+~ illegal again
+return
+break
+continue
