@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     common::{ERRONEOUS_SPAN, IOFile, Span},
-    symbol_table::{FunctionEntry, TypeKind, binding::BindingEntry},
+    symbol_table::{FunctionEntry, TypeKind, binding::BindingEntry, context::ContextStack},
 };
 
 #[derive(PartialEq, Eq)]
@@ -49,20 +49,18 @@ pub static ERRONEOUS_ENTRY: SymbolEntry = SymbolEntry {
 };
 
 pub struct SymbolTable<'a> {
-    scopes: Vec<HashMap<&'a str, Vec<usize>>>,
-    pub stack_top: usize,
-    next_id: usize,
+    pub context_stack: ContextStack<'a>,
     table: HashMap<usize, SymbolEntry>,
+    next_id: usize,
     file: &'a IOFile,
 }
 
 impl<'a> SymbolTable<'a> {
     pub fn new(file: &'a IOFile) -> Self {
         Self {
-            next_id: 1,
-            stack_top: 0,
-            scopes: Vec::new(),
+            context_stack: ContextStack::new(),
             table: HashMap::new(),
+            next_id: 1,
             file,
         }
     }
@@ -75,25 +73,13 @@ impl<'a> SymbolTable<'a> {
         self.file.line_from_index(span.start).unwrap() + 1
     }
 
-    pub fn enter_scope(&mut self) {
-        self.scopes.push(HashMap::new());
-        self.stack_top = self.scopes.len() - 1;
-    }
-
-    pub fn exit_scope(&mut self) {
-        if self.stack_top == 0 {
-            return;
-        }
-
-        self.stack_top -= 1
-    }
-
     pub fn add_symbol(&mut self, symbol: &'a str, id: usize) {
-        let scope = self.scopes.get_mut(self.stack_top).unwrap();
-        if let Some(existing) = scope.get_mut(symbol) {
+        let context = self.context_stack.get_mut_current();
+
+        if let Some(existing) = context.symbols.get_mut(symbol) {
             existing.push(id);
         } else {
-            scope.insert(symbol, vec![id]);
+            context.symbols.insert(symbol, vec![id]);
         }
     }
 
@@ -160,7 +146,7 @@ impl<'a> SymbolTable<'a> {
     }
 
     pub fn get_symbol(&self, symbol: &'a str) -> &SymbolEntry {
-        let id = self.resolve_in_parent(symbol);
+        let id = self.context_stack.resolve_in_parent(symbol);
 
         if id == 0 {
             return &ERRONEOUS_ENTRY;
@@ -170,54 +156,14 @@ impl<'a> SymbolTable<'a> {
     }
 
     pub fn get_symbol_history(&self, symbol: &'a str) -> &Vec<usize> {
-        self.scopes
-            .get(self.stack_top)
-            .unwrap()
+        self.context_stack
+            .get_current()
+            .symbols
             .get(symbol)
             .unwrap()
     }
 
     pub fn get(&self, id: &usize) -> &SymbolEntry {
         self.table.get(id).unwrap()
-    }
-
-    // returns 0 if failure
-    pub fn resolve_in_parent(&self, symbol: &'a str) -> usize {
-        let mut top = self.stack_top;
-
-        loop {
-            let scope = self.scopes.get(top).unwrap();
-
-            if let Some(scope_entry) = scope.get(symbol) {
-                return *scope_entry.last().unwrap();
-            }
-
-            if top > 0 {
-                top -= 1;
-            }
-
-            if top == 0 {
-                break;
-            }
-        }
-
-        0
-    }
-
-    // returns 0 if failure
-    pub fn resolve_in_child(&self, symbol: &'a str) -> usize {
-        let mut bottom = self.stack_top;
-
-        while bottom < self.scopes.len() {
-            let scope = self.scopes.get(bottom).unwrap();
-
-            if let Some(scope_entry) = scope.get(symbol) {
-                return *scope_entry.last().unwrap();
-            }
-
-            bottom += 1;
-        }
-
-        0
     }
 }
