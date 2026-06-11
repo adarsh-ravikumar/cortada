@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{ExpressionAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::ERRONEOUS_BINDING;
+use crate::symbol_table::{ERRONEOUS_BINDING, SymbolKind};
 use crate::{
     common::Span,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
@@ -18,7 +18,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
     ) -> VarDeclAnnotation {
         let symbol_span = decl.name;
 
-        let symbol = self.symbol_table.get_symbol(symbol_span);
+        let symbol = self.symbol_table.symbol_from_span(symbol_span);
 
         let binding_type: TypeKind;
         let type_span: Option<Span>;
@@ -101,34 +101,66 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
     pub fn annotate_var_assign(&mut self, assign: VarAssignStatement) -> VarAssignAnnotation {
         let symbol_span = assign.name;
 
-        let symbol = self.symbol_table.get_symbol(symbol_span);
+        let symbol = self.symbol_table.symbol_from_span(symbol_span);
 
         let mut value = self.annotate_expression(assign.value);
 
         let value_type = value.get_type();
 
-        let mut binding = self.symbol_table.get_binding(symbol);
+        let entry = self.symbol_table.get_symbol(symbol);
 
-        if matches!(binding.binding_type, TypeKind::Error) {
-            self.diagnostics.push(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::UndefinedIdentifier,
+        let binding = match &entry.kind {
+            SymbolKind::Binding(entry) => entry,
+            SymbolKind::Erroneous => {
+                self.diagnostics.push(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UndefinedIdentifier,
 
-                msg: format!("cannot assign to undefined identifier `{}`", symbol),
+                    msg: format!("cannot assign to undefined identifier `{}`", symbol),
 
-                location: assign.name,
-                labels: vec![Label {
-                    span: assign.name,
-                    msg: "assignment target is not defined".into(),
-                    paranthesise: false,
-                    kind: LabelKind::Primary,
-                }],
+                    location: assign.name,
+                    labels: vec![Label {
+                        span: assign.name,
+                        msg: "assignment target is not defined".into(),
+                        paranthesise: false,
+                        kind: LabelKind::Primary,
+                    }],
 
-                notes: vec!["variables must be declared before they can be assigned to".into()],
-            });
+                    notes: vec!["variables must be declared before they can be assigned to".into()],
+                });
+                &ERRONEOUS_BINDING
+            }
+            _ => {
+                self.diagnostics.push(Diagnostic {
+                    severity: DiagnosticSeverity::Error,
+                    class: DiagnosticClass::UndefinedIdentifier,
 
-            binding = &ERRONEOUS_BINDING;
-        }
+                    msg: format!("cannot assign to `{}`", symbol),
+
+                    location: assign.name,
+                    labels: vec![
+                        Label {
+                            span: assign.name,
+                            msg: "this identifer is not assignable".into(),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        },
+                        Label {
+                            span: entry.get_decl_span(),
+                            msg: "this identifer is not assignable".into(),
+                            paranthesise: false,
+                            kind: LabelKind::Primary,
+                        },
+                    ],
+
+                    notes: vec![
+                        "only variables may appear on the left-hand side of an assignment".into(),
+                    ],
+                });
+
+                &ERRONEOUS_BINDING
+            }
+        };
 
         let binding_type = &binding.binding_type;
 
@@ -136,6 +168,93 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             if value_type.try_implicit_cast(&binding_type) {
                 value = self.annotate_cast(value_type.clone(), binding_type.clone(), value);
             } else {
+                let mut labels = vec![Label {
+                    span: assign.value_span,
+                    msg: format!("this expression has type `{}`", value_type.display()),
+                    paranthesise: true,
+                    kind: LabelKind::Primary,
+                }];
+
+                let mut notes = vec![
+                    format!("variables retain the type established by their declaration"),
+                    format!(
+                        "if you intend `{}` to have type `{}` from this point onward, consider shadowing it with a new declaration",
+                        symbol,
+                        value_type.display(),
+                    ),
+                ];
+
+                // we need to look for the original decleration, if any
+                let mut found = false;
+                for id in self.symbol_table.get_symbol_history(symbol) {
+                    match &self.symbol_table.get(id).kind {
+                        SymbolKind::Binding(entry) if entry.binding_type.accepts(value_type) => {
+                            labels.push(Label {
+                                span: if let Some(span) = entry.type_span {
+                                    span
+                                } else {
+                                    entry.decl_span
+                                },
+                                msg: format!(
+                                    "declared here with type `{}`",
+                                    entry.binding_type.display()
+                                ),
+                                kind: LabelKind::Secondary,
+                                paranthesise: entry.type_span.is_some(),
+                            });
+
+                            labels.push(Label {
+                                span: if let Some(span) = binding.type_span {
+                                    span
+                                } else {
+                                    binding.decl_span
+                                },
+                                msg: format!(
+                                    "later shadowed here with type `{}`",
+                                    binding.binding_type.display()
+                                ),
+                                kind: LabelKind::Secondary,
+                                paranthesise: binding.type_span.is_some(),
+                            });
+
+                            notes = vec![
+                                    "shadowing creats a new variable rather than changing the type of an existing one".into(),
+                                format!(
+                                    "`{}` currently referes to the binding introduced on line {}",
+                                    symbol,
+                                    self.symbol_table.get_line_number(binding.decl_span)
+                                ),
+                                format!(
+                                    "the earlier {} binding was shadowed by the later `{}` decleration",
+                                    entry.binding_type.display(),
+                                    binding.binding_type.display()
+                                ),
+                            ];
+
+                            found = true;
+                            break;
+                        }
+
+                        _ => continue,
+                    }
+                }
+
+                if !found {
+                    labels.push(Label {
+                        span: if let Some(span) = binding.type_span {
+                            span
+                        } else {
+                            binding.decl_span
+                        },
+                        msg: format!(
+                            "declared here with type `{}`",
+                            binding.binding_type.display()
+                        ),
+                        kind: LabelKind::Secondary,
+                        paranthesise: binding.type_span.is_some(),
+                    });
+                }
+
                 self.diagnostics.push(Diagnostic {
                     severity: DiagnosticSeverity::Error,
                     class: DiagnosticClass::TypeMismatch,
@@ -148,43 +267,14 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                     ),
 
                     location: assign.value_span,
-                    labels: vec![
-                        Label {
-                            span: assign.value_span,
-                            msg: format!("this expression has type `{}`", value_type.display()),
-                            paranthesise: true,
-                            kind: LabelKind::Primary,
-                        },
-                        Label {
-                            span: if let Some(span) = binding.type_span {
-                                span
-                            } else {
-                                binding.decl_span
-                            },
-                            msg: format!(
-                                "`{}` declared with type `{}`",
-                                symbol,
-                                binding_type.display()
-                            ),
-                            paranthesise: binding.type_span.is_some(),
-                            kind: LabelKind::Secondary,
-                        },
-                    ],
-
-                    notes: vec![
-                        format!("variables retain the type established by their declaration"),
-                        format!(
-                            "if you intend `{}` to have type `{}` from this point onward, consider shadowing it with a new declaration",
-                            symbol,
-                            value_type.display(),
-                        ),
-                    ],
+                    labels,
+                    notes,
                 });
             }
         }
 
         VarAssignAnnotation {
-            entry_reference: binding.id,
+            entry_reference: entry.id,
             value: *value,
         }
     }
