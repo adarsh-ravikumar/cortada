@@ -1,5 +1,5 @@
 use crate::{
-    parser::{AstNodeKind, ReturnStatement},
+    parser::AstNodeKind,
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
         CastAnnotation, ExpressionAnnotation, FloatAnnotation, FunctionAnnotation,

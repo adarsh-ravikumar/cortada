@@ -78,14 +78,13 @@ impl<'a> Parser<'a> {
         }
 
         let start = self.advance().span.start;
+        let end = self.peek(0).span.end;
 
         if self.peek(0).kind == TokenKind::Newline {
-            return AstNode::return_stmt(None, start, self.peek(0).span.end);
+            return AstNode::return_stmt(None, start, end);
         }
 
         let expr = self.parse_expression();
-
-        let end = expr.span.end;
 
         AstNode::return_stmt(Some(expr), start, end)
     }
