@@ -1,10 +1,9 @@
 use crate::{
-    parser::{AstNode, AstNodeKind, IfStatement, ReturnStatement, WhileStatement},
+    parser::{AstNode, AstNodeKind, IfStatement, WhileStatement},
     semantic::{
-        ElifAnnotation, ExpressionAnnotation, IfAnnotation, ReturnAnnotation, SemanticAnalyzer,
-        WhileAnnotation,
+        ElifAnnotation, ExpressionAnnotation, IfAnnotation, SemanticAnalyzer, WhileAnnotation,
     },
-    symbol_table::TypeKind,
+    symbol_table::{ContextKind, TypeKind},
 };
 
 impl<'a> SemanticAnalyzer<'a> {
@@ -20,24 +19,29 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_if_statement(&mut self, statement: IfStatement) -> IfAnnotation {
         let condition = self.annotate_condition(statement.condition);
 
-        self.symbol_table.enter_scope();
+        self.symbol_table
+            .context_stack
+            .enter_context(ContextKind::Conditional);
+
         let if_body = match statement.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
-        self.symbol_table.exit_scope();
+        self.symbol_table.context_stack.exit_context();
 
         let mut elifs: Vec<ElifAnnotation> = Vec::new();
 
         for elif in statement.elif_stmts {
             let condition = self.annotate_condition(elif.condition);
 
-            self.symbol_table.enter_scope();
+            self.symbol_table
+                .context_stack
+                .enter_context(ContextKind::Conditional);
             let elif_body = match elif.body.kind {
                 AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                 _ => unreachable!(),
             };
-            self.symbol_table.exit_scope();
+            self.symbol_table.context_stack.exit_context();
 
             elifs.push(ElifAnnotation {
                 condition,
@@ -47,12 +51,14 @@ impl<'a> SemanticAnalyzer<'a> {
 
         match statement.else_stmt {
             Some(stmt) => {
-                self.symbol_table.enter_scope();
+                self.symbol_table
+                    .context_stack
+                    .enter_context(ContextKind::Conditional);
                 let else_body = match stmt.kind {
                     AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                     _ => unreachable!(),
                 };
-                self.symbol_table.exit_scope();
+                self.symbol_table.context_stack.exit_context();
 
                 IfAnnotation {
                     condition,
@@ -74,21 +80,25 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_while_statement(&mut self, statement: WhileStatement) -> WhileAnnotation {
         let condition = self.annotate_condition(statement.condition);
 
-        self.symbol_table.enter_scope();
+        self.symbol_table
+            .context_stack
+            .enter_context(ContextKind::Loop);
         let while_body = match statement.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
-        self.symbol_table.exit_scope();
+        self.symbol_table.context_stack.exit_context();
 
         match statement.else_stmt {
             Some(stmt) => {
-                self.symbol_table.enter_scope();
+                self.symbol_table
+                    .context_stack
+                    .enter_context(ContextKind::Conditional);
                 let else_body = match stmt.kind {
                     AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                     _ => unreachable!(),
                 };
-                self.symbol_table.exit_scope();
+                self.symbol_table.context_stack.exit_context();
 
                 WhileAnnotation {
                     condition,
@@ -102,23 +112,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 body: while_body,
                 else_stmt: None,
             },
-        }
-    }
-
-    pub fn annotate_return_statement(&mut self, stmt: ReturnStatement) -> ReturnAnnotation {
-        let return_expr = if let Some(expr) = stmt.expr {
-            *self.annotate_expression(expr)
-        } else {
-            ExpressionAnnotation::Null
-        };
-
-        let return_type = return_expr.get_type();
-
-        // TODO :update current context
-
-        ReturnAnnotation {
-            return_type: return_type.clone(),
-            expr: return_expr,
         }
     }
 }

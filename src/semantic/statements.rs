@@ -1,21 +1,19 @@
 use crate::{
-    parser::{AstNode, AstNodeKind, Program, Statements},
+    common::Span,
+    diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
+    parser::{AstNode, AstNodeKind, Program, ReturnStatement, Statements},
     semantic::{
-        AnnotatedStatements, SemanticAnalyzer,
-        annotated_node::{AnnotatedTree, ExpressionAnnotation, StatementAnnotation},
+        AnnotatedStatements, AnnotatedTree, ExpressionAnnotation, ReturnAnnotation,
+        SemanticAnalyzer, StatementAnnotation,
     },
 };
 
 impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_program(&mut self, program: Program) -> AnnotatedTree {
-        self.symbol_table.enter_scope();
-
         let statements = match program.statements.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => unreachable!(),
         };
-
-        self.symbol_table.exit_scope();
 
         AnnotatedTree { statements }
     }
@@ -58,7 +56,17 @@ impl<'a> SemanticAnalyzer<'a> {
             }
 
             AstNodeKind::Return(stmt) => {
-                StatementAnnotation::Return(self.annotate_return_statement(stmt))
+                StatementAnnotation::Return(self.annotate_return_statement(stmt, statement.span))
+            }
+
+            AstNodeKind::Break => {
+                self.annotate_break_statement(statement.span);
+                StatementAnnotation::Break
+            }
+
+            AstNodeKind::Continue => {
+                self.annotate_continue_statement(statement.span);
+                StatementAnnotation::Break
             }
 
             AstNodeKind::Atom(atom) => {
@@ -67,6 +75,95 @@ impl<'a> SemanticAnalyzer<'a> {
             }
 
             _ => panic!("Unexpected statement"),
+        }
+    }
+
+    pub fn annotate_return_statement(
+        &mut self,
+        stmt: ReturnStatement,
+        return_span: Span,
+    ) -> ReturnAnnotation {
+        let return_expr = if let Some(expr) = stmt.expr {
+            *self.annotate_expression(expr)
+        } else {
+            ExpressionAnnotation::Null
+        };
+
+        let return_type = return_expr.get_type();
+
+        if !self
+            .symbol_table
+            .context_stack
+            .try_set_context_return(return_type.clone())
+        {
+            self.diagnostics.push(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::InvalidControlFlow,
+                location: return_span,
+                msg: "`return` can only be used inside a function".into(),
+
+                labels: vec![Label {
+                    span: return_span,
+                    msg: "not inside a function".into(),
+                    kind: LabelKind::Primary,
+                    paranthesise: false,
+                }],
+
+                notes: vec![
+                    "`return` transfers control to the caller of the enclosing function".into(),
+                    "remove the `return` statement, or move it into a function body".into(),
+                ],
+            })
+        }
+
+        ReturnAnnotation {
+            return_type: return_type.clone(),
+            expr: return_expr,
+        }
+    }
+
+    pub fn annotate_break_statement(&mut self, span: Span) {
+        if !self.symbol_table.context_stack.try_set_context_break() {
+            self.diagnostics.push(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::InvalidControlFlow,
+                location: span,
+                msg: "`break` can only be used inside a loop".into(),
+
+                labels: vec![Label {
+                    span: span,
+                    msg: "not inside a loop".into(),
+                    kind: LabelKind::Primary,
+                    paranthesise: false,
+                }],
+                notes: vec![
+                    "`break` terminates execution of the enclosing loop".into(),
+                    "remove the `break` statement, or place it inside a loop".into(),
+                ],
+            })
+        }
+    }
+
+    pub fn annotate_continue_statement(&mut self, span: Span) {
+        if !self.symbol_table.context_stack.try_set_context_continue() {
+            self.diagnostics.push(Diagnostic {
+                severity: DiagnosticSeverity::Error,
+                class: DiagnosticClass::InvalidControlFlow,
+                location: span,
+                msg: "`continue` can only be used inside a loop".into(),
+
+                labels: vec![Label {
+                    span: span,
+                    msg: "not inside a loop".into(),
+                    kind: LabelKind::Primary,
+                    paranthesise: false,
+                }],
+
+                notes: vec![
+                    "`continue` skips the remainder of the current iteration and proceeds to the next one".into(),
+                    "remove the `continue` statement, or place it inside a loop".into(),
+                ],
+            })
         }
     }
 }

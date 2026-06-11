@@ -1,10 +1,11 @@
 use crate::{
-    parser::AstNodeKind,
+    parser::{AstNodeKind, ReturnStatement},
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
         CastAnnotation, ExpressionAnnotation, FloatAnnotation, FunctionAnnotation,
-        IdentifierAnnotation, IfAnnotation, IntegerAnnotation, StatementAnnotation,
-        UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation, WhileAnnotation,
+        IdentifierAnnotation, IfAnnotation, IntegerAnnotation, ReturnAnnotation,
+        StatementAnnotation, UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
+        WhileAnnotation,
     },
     symbol_table::SymbolTable,
     utils::Style,
@@ -65,8 +66,35 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
             StatementAnnotation::Fn(fn_stmt) => self.print_fn(fn_stmt, level, is_terminal),
 
-            StatementAnnotation::Return(_) => (),
+            StatementAnnotation::Return(stmt) => self.print_return(stmt, level, is_terminal),
+
+            StatementAnnotation::Break => self.print_break(level, is_terminal),
+
+            StatementAnnotation::Continue => self.print_continue(level, is_terminal),
         }
+    }
+
+    fn print_return(&self, stmt: &ReturnAnnotation, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!(
+            "{leader}{}Return{}: {}",
+            Style::BLUE,
+            Style::RESET,
+            stmt.return_type.display()
+        );
+    }
+
+    fn print_break(&self, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!("{leader}{}Break{}", Style::BLUE, Style::RESET,);
+    }
+
+    fn print_continue(&self, level: usize, is_terminal: bool) {
+        let leader = Self::generate_field_leader(level, is_terminal);
+
+        println!("{leader}{}Break{}", Style::BLUE, Style::RESET,);
     }
 
     fn print_var_decl(&self, decl: &VarDeclAnnotation, level: usize, is_terminal: bool) {

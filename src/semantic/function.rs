@@ -2,7 +2,7 @@ use crate::{
     common::Span,
     parser::{AstNodeKind, FnStatement},
     semantic::{ExpressionAnnotation, FunctionAnnotation, SemanticAnalyzer, VarDeclAnnotation},
-    symbol_table::TypeKind,
+    symbol_table::{ContextKind, TypeKind},
 };
 
 impl<'a, 'scope> SemanticAnalyzer<'a> {
@@ -14,7 +14,9 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         let mut params: Vec<VarDeclAnnotation> = Vec::new();
         let mut param_types: Vec<TypeKind> = Vec::new();
 
-        self.symbol_table.enter_scope();
+        self.symbol_table
+            .context_stack
+            .enter_context(ContextKind::Function);
 
         for param in fn_stmt.params {
             match param.kind {
@@ -36,15 +38,13 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             };
         }
 
-        let mut return_type: TypeKind = TypeKind::Error; // this will be changed once control-flow
-        // analysis is implemented
+        let mut return_type: TypeKind = TypeKind::Error;
         let mut return_type_span: Option<Span> = None;
 
         if let Some(ty) = fn_stmt.return_type {
             return_type_span = Some(ty.span);
             return_type = self.annotate_type_expression(ty.kind);
         }
-        // for now, just annotate the body
 
         let body = match fn_stmt.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
@@ -59,7 +59,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             return_type,
         );
 
-        self.symbol_table.exit_scope();
+        self.symbol_table.context_stack.exit_context();
 
         FunctionAnnotation {
             entry,

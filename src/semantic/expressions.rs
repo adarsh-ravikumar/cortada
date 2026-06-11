@@ -223,7 +223,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 kind: LabelKind::Primary,
             }];
 
-            let id = self.symbol_table.resolve_in_child(symbol);
+            let id = self.symbol_table.context_stack.resolve_in_child(symbol);
             if id != 0 {
                 let entry = self.symbol_table.get(&id);
                 labels.push(Label {

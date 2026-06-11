@@ -19,14 +19,14 @@ Declarations
 -----------
 [x] Symbol Table
 [x] Binding Table
-[ ] Function Table
+[x] Function Table
 [ ] Type Alias Table
 
 Resolution
 ----------
-[ ] Name Resolution
-[ ] Scope Resolution
-[ ] Binding shadowing
+[x] Name Resolution
+[x] Scope Resolution
+[x] Binding shadowing
 
 Types
 -----
@@ -48,15 +48,45 @@ Diagnostics
 [x] Type Mismatch
 [ ] Invalid Function Call
 
+# ERRORS
+* Circular reference
+
+* Assignment to undecleared variable => add a note "if you are trying to declare, do :="
+
+* Parameter name duplicate
+* Function name / variable name collision
+* Function call arity
+* Unknown function
+* Unable to determine overload
+* Missing return
+* Multiple incompatible returns
+* Return outside function
+* Break / continue outside loop 
+
+# WARNINGS
+* Unused variable
+* Unused functions
+* Unused parameter
+* Variable shadowing (if child scope re-declares variable in parent)
+* Assigned but never read 
+* Value overwritten before use 
+* Infinite loop
+* Constant conditions
+* Unreachable code
+* Statement after break / continue / return
+* Identifier closest match
+* Recursive warning if no base condition
 
 # REMAINING
 * Pretty print tables
 * Warn printing for diagnostics
-* Function calls 
-* Function overloading
+
 * Return statements
 * Break / Continue
 * Control flow analysis
    - Every path returns
    - Unreachable code
    - Definite assignment
+
+* Function calls 
+* Function overloading

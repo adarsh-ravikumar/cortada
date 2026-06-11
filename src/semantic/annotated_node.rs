@@ -13,13 +13,17 @@ pub struct AnnotatedStatements {
 }
 
 pub enum StatementAnnotation {
+    Expression(ExpressionAnnotation),
+
     VarDecl(VarDeclAnnotation),
     VarAssign(VarAssignAnnotation),
     If(IfAnnotation),
     While(WhileAnnotation),
     Fn(FunctionAnnotation),
+
     Return(ReturnAnnotation),
-    Expression(ExpressionAnnotation),
+    Break,
+    Continue,
 }
 
 pub struct VarDeclAnnotation {
