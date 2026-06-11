@@ -14,6 +14,8 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
         let mut params: Vec<VarDeclAnnotation> = Vec::new();
         let mut param_types: Vec<TypeKind> = Vec::new();
 
+        self.symbol_table.enter_scope();
+
         for param in fn_stmt.params {
             match param.kind {
                 AstNodeKind::VarDecl(decl) => {
@@ -22,12 +24,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
                     param.value = ExpressionAnnotation::Null;
 
                     let param_type = if param.entry != 0 {
-                        self.symbol_table
-                            .bindings
-                            .get(&param.entry)
-                            .unwrap()
-                            .binding_type
-                            .clone()
+                        self.symbol_table.get(&param.entry).get_type().clone()
                     } else {
                         TypeKind::Error
                     };
@@ -61,6 +58,8 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             return_type_span,
             return_type,
         );
+
+        self.symbol_table.exit_scope();
 
         FunctionAnnotation {
             entry,

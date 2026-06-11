@@ -20,20 +20,24 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_if_statement(&mut self, statement: IfStatement) -> IfAnnotation {
         let condition = self.annotate_condition(statement.condition);
 
+        self.symbol_table.enter_scope();
         let if_body = match statement.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
+        self.symbol_table.exit_scope();
 
         let mut elifs: Vec<ElifAnnotation> = Vec::new();
 
         for elif in statement.elif_stmts {
             let condition = self.annotate_condition(elif.condition);
 
+            self.symbol_table.enter_scope();
             let elif_body = match elif.body.kind {
                 AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                 _ => unreachable!(),
             };
+            self.symbol_table.exit_scope();
 
             elifs.push(ElifAnnotation {
                 condition,
@@ -43,10 +47,12 @@ impl<'a> SemanticAnalyzer<'a> {
 
         match statement.else_stmt {
             Some(stmt) => {
+                self.symbol_table.enter_scope();
                 let else_body = match stmt.kind {
                     AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                     _ => unreachable!(),
                 };
+                self.symbol_table.exit_scope();
 
                 IfAnnotation {
                     condition,
@@ -68,17 +74,21 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_while_statement(&mut self, statement: WhileStatement) -> WhileAnnotation {
         let condition = self.annotate_condition(statement.condition);
 
+        self.symbol_table.enter_scope();
         let while_body = match statement.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
+        self.symbol_table.exit_scope();
 
         match statement.else_stmt {
             Some(stmt) => {
+                self.symbol_table.enter_scope();
                 let else_body = match stmt.kind {
                     AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                     _ => unreachable!(),
                 };
+                self.symbol_table.exit_scope();
 
                 WhileAnnotation {
                     condition,

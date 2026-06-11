@@ -83,9 +83,9 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
         let leader = Self::generate_field_leader(level + 1, false);
 
-        let entry = self.symbol_table.bindings.get(&decl.entry).unwrap();
+        let entry = self.symbol_table.get(&decl.entry);
 
-        let name = self.symbol_table.get_symbol(entry.symbol_span);
+        let name = self.symbol_table.symbol_from_span(entry.get_symbol_span());
 
         println!(
             "{leader}{}name: {}{}{}",
@@ -99,7 +99,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
             "{leader}{}type: {}{}",
             Style::BLUE,
             Style::RESET,
-            entry.binding_type.display(),
+            entry.get_type().display(),
         );
 
         println!("{leader}{}value{}", Style::BLUE, Style::RESET,);
@@ -120,13 +120,9 @@ impl<'a> AnnotatedTreePrinter<'a> {
 
         let leader = Self::generate_field_leader(level + 1, false);
 
-        let entry = self
-            .symbol_table
-            .bindings
-            .get(&assign.entry_reference)
-            .unwrap();
+        let entry = self.symbol_table.get(&assign.entry_reference);
 
-        let name = self.symbol_table.get_symbol(entry.symbol_span);
+        let name = self.symbol_table.symbol_from_span(entry.get_symbol_span());
 
         println!(
             "{leader}{}name: {}{}{}",
@@ -143,7 +139,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
     fn print_fn(&self, stmt: &FunctionAnnotation, level: usize, is_terminal: bool) {
         let leader = Self::generate_field_leader(level, is_terminal);
 
-        let entry = self.symbol_table.functions.get(&stmt.entry).unwrap();
+        let entry = self.symbol_table.get(&stmt.entry);
 
         println!(
             "{leader}{}{}Function{}{}",
@@ -159,7 +155,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
             Self::generate_field_leader(level + 1, false),
             Style::MAGENTA,
             Style::RESET,
-            entry.return_type.display()
+            entry.get_type().display()
         );
 
         println!(
@@ -465,7 +461,7 @@ impl<'a> AnnotatedTreePrinter<'a> {
             Style::CYAN,
             Style::RESET,
             Style::BRIGHT_YELLOW,
-            self.symbol_table.get_symbol(ident.span),
+            self.symbol_table.symbol_from_span(ident.span),
             Style::RESET,
             Style::DIM,
             ident.entry,

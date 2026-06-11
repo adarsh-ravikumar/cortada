@@ -8,25 +8,25 @@ use crate::{
 
 impl<'a> SemanticAnalyzer<'a> {
     pub fn annotate_program(&mut self, program: Program) -> AnnotatedTree {
+        self.symbol_table.enter_scope();
+
         let statements = match program.statements.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => unreachable!(),
         };
 
+        self.symbol_table.exit_scope();
+
         AnnotatedTree { statements }
     }
 
     pub fn annotate_statements(&mut self, statements: Statements) -> AnnotatedStatements {
-        self.symbol_table.enter_scope();
-
         let stmts = statements.stmts;
         let mut annotated: Vec<StatementAnnotation> = Vec::new();
 
         for stmt in stmts {
             annotated.push(self.annotate_statement(stmt));
         }
-
-        self.symbol_table.exit_scope();
 
         AnnotatedStatements {
             statements: annotated,

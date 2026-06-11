@@ -1,19 +1,58 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::{IOFile, Span},
-    symbol_table::{
-        BindingTable, FunctionEntry, FunctionTable, TypeKind,
-        binding::{BindingEntry, ERRONEOUS_BINDING},
-        function::ERRONEOUS_FUNCTION,
-    },
+    common::{ERRONEOUS_SPAN, IOFile, Span},
+    symbol_table::{FunctionEntry, TypeKind, binding::BindingEntry},
+};
+
+#[derive(PartialEq, Eq)]
+pub enum SymbolKind {
+    Binding(BindingEntry),
+    Function(FunctionEntry),
+    Erroneous,
+}
+
+pub struct SymbolEntry {
+    pub id: usize,
+    pub kind: SymbolKind,
+}
+
+impl SymbolEntry {
+    pub fn get_decl_span(&self) -> Span {
+        match &self.kind {
+            SymbolKind::Binding(binding) => binding.decl_span,
+            SymbolKind::Function(function) => function.decl_span,
+            SymbolKind::Erroneous => ERRONEOUS_SPAN,
+        }
+    }
+
+    pub fn get_symbol_span(&self) -> Span {
+        match &self.kind {
+            SymbolKind::Binding(binding) => binding.symbol_span,
+            SymbolKind::Function(function) => function.symbol_span,
+            SymbolKind::Erroneous => ERRONEOUS_SPAN,
+        }
+    }
+
+    pub fn get_type(&self) -> &TypeKind {
+        match &self.kind {
+            SymbolKind::Binding(binding) => &binding.binding_type,
+            SymbolKind::Function(function) => &function.return_type,
+            SymbolKind::Erroneous => &TypeKind::Error,
+        }
+    }
+}
+
+pub static ERRONEOUS_ENTRY: SymbolEntry = SymbolEntry {
+    id: 0,
+    kind: SymbolKind::Erroneous,
 };
 
 pub struct SymbolTable<'a> {
     scopes: Vec<HashMap<&'a str, Vec<usize>>>,
+    pub stack_top: usize,
     next_id: usize,
-    pub bindings: BindingTable,
-    pub functions: FunctionTable,
+    table: HashMap<usize, SymbolEntry>,
     file: &'a IOFile,
 }
 
@@ -21,32 +60,36 @@ impl<'a> SymbolTable<'a> {
     pub fn new(file: &'a IOFile) -> Self {
         Self {
             next_id: 1,
+            stack_top: 0,
             scopes: Vec::new(),
-            bindings: BindingTable::new(),
-            functions: FunctionTable::new(),
+            table: HashMap::new(),
             file,
         }
     }
 
-    pub fn get_symbol(&self, span: Span) -> &'a str {
+    pub fn symbol_from_span(&self, span: Span) -> &'a str {
         self.file.view_span(span)
+    }
+
+    pub fn get_line_number(&self, span: Span) -> usize {
+        self.file.line_from_index(span.start).unwrap() + 1
     }
 
     pub fn enter_scope(&mut self) {
         self.scopes.push(HashMap::new());
+        self.stack_top = self.scopes.len() - 1;
     }
 
     pub fn exit_scope(&mut self) {
-        if self.scopes.len() == 1 {
+        if self.stack_top == 0 {
             return;
         }
 
-        self.scopes.pop();
+        self.stack_top -= 1
     }
 
     pub fn add_symbol(&mut self, symbol: &'a str, id: usize) {
-        let scope = self.scopes.last_mut().unwrap();
-
+        let scope = self.scopes.get_mut(self.stack_top).unwrap();
         if let Some(existing) = scope.get_mut(symbol) {
             existing.push(id);
         } else {
@@ -63,26 +106,26 @@ impl<'a> SymbolTable<'a> {
     ) -> usize {
         let id = self.next_id;
 
-        self.bindings
-            .create(id, decl_span, symbol_span, type_span, binding_type);
+        self.table.insert(
+            id,
+            SymbolEntry {
+                id,
+                kind: SymbolKind::Binding(BindingEntry::new(
+                    decl_span,
+                    symbol_span,
+                    type_span,
+                    binding_type,
+                )),
+            },
+        );
 
         self.next_id += 1;
 
-        let symbol = self.get_symbol(symbol_span);
+        let symbol = self.symbol_from_span(symbol_span);
 
         self.add_symbol(symbol, id);
 
         id
-    }
-
-    pub fn get_binding(&self, symbol: &'a str) -> &BindingEntry {
-        let id = self.resolve(symbol);
-
-        if id == 0 {
-            return &ERRONEOUS_BINDING;
-        }
-
-        self.bindings.get(&id).unwrap()
     }
 
     pub fn create_function(
@@ -95,38 +138,84 @@ impl<'a> SymbolTable<'a> {
     ) -> usize {
         let id = self.next_id;
 
-        self.functions.create(
+        self.table.insert(
             id,
-            decl_span,
-            symbol_span,
-            params,
-            return_type_span,
-            return_type,
+            SymbolEntry {
+                id,
+                kind: SymbolKind::Function(FunctionEntry::new(
+                    decl_span,
+                    symbol_span,
+                    params,
+                    return_type_span,
+                    return_type,
+                )),
+            },
         );
 
-        let symbol = self.get_symbol(symbol_span);
+        let symbol = self.symbol_from_span(symbol_span);
 
         self.add_symbol(symbol, id);
 
         id
     }
 
-    pub fn get_function(&self, symbol: &'a str) -> &FunctionEntry {
-        let id = self.resolve(symbol);
+    pub fn get_symbol(&self, symbol: &'a str) -> &SymbolEntry {
+        let id = self.resolve_in_parent(symbol);
 
         if id == 0 {
-            return &ERRONEOUS_FUNCTION;
+            return &ERRONEOUS_ENTRY;
         }
 
-        self.functions.get(&id).unwrap()
+        self.table.get(&id).unwrap()
+    }
+
+    pub fn get_symbol_history(&self, symbol: &'a str) -> &Vec<usize> {
+        self.scopes
+            .get(self.stack_top)
+            .unwrap()
+            .get(symbol)
+            .unwrap()
+    }
+
+    pub fn get(&self, id: &usize) -> &SymbolEntry {
+        self.table.get(id).unwrap()
     }
 
     // returns 0 if failure
-    pub fn resolve(&self, symbol: &'a str) -> usize {
-        for scope in self.scopes.iter().rev() {
+    pub fn resolve_in_parent(&self, symbol: &'a str) -> usize {
+        let mut top = self.stack_top;
+
+        loop {
+            let scope = self.scopes.get(top).unwrap();
+
             if let Some(scope_entry) = scope.get(symbol) {
                 return *scope_entry.last().unwrap();
             }
+
+            if top > 0 {
+                top -= 1;
+            }
+
+            if top == 0 {
+                break;
+            }
+        }
+
+        0
+    }
+
+    // returns 0 if failure
+    pub fn resolve_in_child(&self, symbol: &'a str) -> usize {
+        let mut bottom = self.stack_top;
+
+        while bottom < self.scopes.len() {
+            let scope = self.scopes.get(bottom).unwrap();
+
+            if let Some(scope_entry) = scope.get(symbol) {
+                return *scope_entry.last().unwrap();
+            }
+
+            bottom += 1;
         }
 
         0

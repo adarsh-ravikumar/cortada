@@ -1,7 +1,7 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::ERRONEOUS_BINDING;
+use crate::symbol_table::SymbolKind;
 
 use crate::{
     common::Span,
@@ -211,30 +211,43 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     pub fn annotate_identifier(&mut self, name: Span) -> AtomAnnotation {
-        let symbol = self.symbol_table.get_symbol(name);
-        let binding = self.symbol_table.get_binding(symbol);
+        let symbol = self.symbol_table.symbol_from_span(name);
+        let entry = self.symbol_table.get_symbol(symbol);
 
-        if binding == &ERRONEOUS_BINDING {
+        if entry.kind == SymbolKind::Erroneous {
+            // if we find this binding in a child scope, that becomes a secondary note
+            let mut labels: Vec<Label> = vec![Label {
+                span: name,
+                msg: "identifier is not defined".into(),
+                paranthesise: false,
+                kind: LabelKind::Primary,
+            }];
+
+            let id = self.symbol_table.resolve_in_child(symbol);
+            if id != 0 {
+                let entry = self.symbol_table.get(&id);
+                labels.push(Label {
+                    span: entry.get_decl_span(),
+                    msg: format!("`{}` declared here", symbol),
+                    paranthesise: false,
+                    kind: LabelKind::Secondary,
+                })
+            }
+
             self.diagnostics.push(Diagnostic {
                 severity: DiagnosticSeverity::Error,
                 class: DiagnosticClass::UndefinedIdentifier,
 
                 msg: format!("use of undefined identifier `{}`", symbol),
                 location: name,
-                labels: vec![Label {
-                    span: name,
-                    msg: "identifier is not defined".into(),
-                    paranthesise: false,
-                    kind: LabelKind::Primary,
-                }],
-
+                labels,
                 notes: vec!["identifiers must be declared before they can be used".into()],
             });
         }
 
         AtomAnnotation::Identifier(IdentifierAnnotation {
-            entry: binding.id,
-            atom_type: binding.binding_type.clone(),
+            entry: entry.id,
+            atom_type: entry.get_type().clone(),
             span: name,
         })
     }

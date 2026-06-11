@@ -9,8 +9,6 @@ pub type FunctionId = usize;
 
 #[derive(PartialEq, Eq)]
 pub struct FunctionEntry {
-    pub id: FunctionId,
-
     pub decl_span: Span,
     pub symbol_span: Span,
 
@@ -23,7 +21,6 @@ pub struct FunctionEntry {
 }
 
 pub static ERRONEOUS_FUNCTION: FunctionEntry = FunctionEntry {
-    id: 0,
     decl_span: ERRONEOUS_SPAN,
     symbol_span: ERRONEOUS_SPAN,
     params: Vec::new(),
@@ -36,41 +33,21 @@ pub struct FunctionTable {
     table: HashMap<FunctionId, FunctionEntry>,
 }
 
-impl<'a> FunctionTable {
-    pub fn new() -> Self {
-        Self {
-            table: HashMap::new(),
-        }
-    }
-
-    pub fn create(
-        &mut self,
-        id: FunctionId,
+impl<'a> FunctionEntry {
+    pub fn new(
         decl_span: Span,
         symbol_span: Span,
         params: Vec<TypeKind>,
         return_type_span: Option<Span>,
         return_type: TypeKind,
-    ) {
-        self.table.insert(
-            id,
-            FunctionEntry {
-                id,
-                decl_span,
-                symbol_span,
-                arity: params.len(),
-                params,
-                return_type_span,
-                return_type,
-            },
-        );
-    }
-
-    pub fn get(&self, id: &FunctionId) -> Option<&FunctionEntry> {
-        self.table.get(id)
-    }
-
-    pub fn get_mut(&mut self, id: &FunctionId) -> Option<&mut FunctionEntry> {
-        self.table.get_mut(id)
+    ) -> Self {
+        Self {
+            decl_span,
+            symbol_span,
+            arity: params.len(),
+            params,
+            return_type_span,
+            return_type,
+        }
     }
 }
