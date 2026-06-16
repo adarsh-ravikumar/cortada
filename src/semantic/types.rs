@@ -3,8 +3,8 @@ use crate::semantic::SemanticAnalyzer;
 use std::collections::BTreeSet;
 
 use crate::{
+    context::{BuiltinType, TypeKind, UnionType},
     parser::{AstNodeKind, TypePrimary, TypePrimaryKind, TypeUnion},
-    symbol_table::{BuiltinType, TypeKind, UnionType},
 };
 
 impl<'a> SemanticAnalyzer<'a> {

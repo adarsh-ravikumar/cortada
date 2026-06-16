@@ -1,85 +1,63 @@
-~ illegal return at global scope
-return
-
-~ illegal break at global scope
-break
-
-~ illegal continue at global scope
-continue
-
-if true:
-    ~ still not inside a function or loop
-    return
-
-    ~ still not inside a loop
-    break
-
-    continue
-
-while true:
-    ~ legal
-    break
-
-    ~ legal
-    continue
+fn stress1() -> int:
+    return 1
 
     if true:
-        ~ legal, should see the enclosing loop
-        break
-
-        ~ legal
-        continue
-
-        ~ illegal, no enclosing function
-        return
-
-fn foo():
-    ~ legal
-    return
-
-fn bar():
-    if true:
-        ~ legal
-        return
-
-        ~ illegal, no loop
-        break
-
-        continue
+        return 2
 
     while true:
-        ~ all legal
-        break
-        continue
-        return
+        return 3
 
-fn baz():
-    while true:
-        if true:
-            ~ all legal
-            break
-            continue
-            return
-
-if true:
-    while true:
-        ~ legal because we're inside a loop
-        break
-        continue
-
-        ~ illegal because we're not inside a function
-        return
-
-fn qux():
     if true:
         while true:
-            if true:
-                ~ all legal
-                break
-                continue
-                return
+            return false      ~ bool ≠ int
 
-~ illegal again
-return
-break
-continue
+    return 4.5               ~ float ≠ int
+
+fn stress2():
+    return true              ~ infer bool
+
+    if true:
+        return false
+
+    while true:
+        return true
+
+    if true:
+        while true:
+            return 42         ~ int ≠ bool
+
+    return null              ~ null ≠ bool
+
+fn stress3():
+    if true:
+        return 1             ~ infer int
+
+    while true:
+        if true:
+            return 2
+
+    if true:
+        while true:
+            return 3.14       ~ float ≠ int
+
+    return false             ~ bool ≠ int
+
+fn stress4() -> float:
+    if true:
+        while true:
+            return 1.5
+
+    return 2                 ~ int should implicitly cast to float (if allowed)
+
+    return true              ~ bool ≠ float
+
+fn stress5():
+    while true:
+        if true:
+            return null       ~ infer null
+
+        if false:
+            return null
+
+    return 1                 ~ int ≠ null
+

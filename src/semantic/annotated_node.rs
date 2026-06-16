@@ -1,7 +1,7 @@
 use crate::{
     common::Span,
+    context::{BuiltinType, TypeKind},
     semantic::operator::{BinaryOpAnnotation, UnaryOpAnnotation},
-    symbol_table::{BuiltinType, TypeKind},
 };
 
 pub struct AnnotatedTree {

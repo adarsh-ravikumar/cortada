@@ -2,10 +2,10 @@ mod common;
 mod pretty;
 mod utils;
 
+mod context;
 mod lexer;
 mod parser;
 mod semantic;
-mod symbol_table;
 
 mod diagnostic;
 

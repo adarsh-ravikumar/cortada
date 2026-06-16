@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     common::{ERRONEOUS_SPAN, IOFile, Span},
-    symbol_table::{FunctionEntry, TypeKind, binding::BindingEntry, context::ContextStack},
+    context::{ContextKind, FunctionEntry, TypeKind, binding::BindingEntry, context::ContextStack},
 };
 
 #[derive(PartialEq, Eq)]
@@ -119,30 +119,34 @@ impl<'a> SymbolTable<'a> {
         decl_span: Span,
         symbol_span: Span,
         params: Vec<TypeKind>,
-        return_type_span: Option<Span>,
-        return_type: TypeKind,
     ) -> usize {
         let id = self.next_id;
 
-        self.table.insert(
-            id,
-            SymbolEntry {
-                id,
-                kind: SymbolKind::Function(FunctionEntry::new(
-                    decl_span,
-                    symbol_span,
-                    params,
-                    return_type_span,
-                    return_type,
-                )),
-            },
-        );
+        match &self.context_stack.get_current().kind {
+            ContextKind::Function(ctx) => {
+                self.table.insert(
+                    id,
+                    SymbolEntry {
+                        id,
+                        kind: SymbolKind::Function(FunctionEntry::new(
+                            decl_span,
+                            symbol_span,
+                            params,
+                            ctx.get_return_span(),
+                            ctx.return_type.clone(),
+                        )),
+                    },
+                );
 
-        let symbol = self.symbol_from_span(symbol_span);
+                let symbol = self.symbol_from_span(symbol_span);
 
-        self.add_symbol(symbol, id);
+                self.add_symbol(symbol, id);
 
-        id
+                id
+            }
+
+            _ => panic!("expected current context to be FunctionContext"),
+        }
     }
 
     pub fn get_symbol(&self, symbol: &'a str) -> &SymbolEntry {

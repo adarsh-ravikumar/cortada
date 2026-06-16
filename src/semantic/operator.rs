@@ -1,7 +1,7 @@
 use crate::{
     common::Span,
+    context::{BuiltinType, TypeKind},
     parser::{BinaryOp, UnaryOp},
-    symbol_table::{BuiltinType, TypeKind},
 };
 
 pub struct BinaryOpAnnotation {

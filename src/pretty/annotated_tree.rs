@@ -1,4 +1,5 @@
 use crate::{
+    context::SymbolTable,
     parser::AstNodeKind,
     semantic::{
         AnnotatedStatements, AnnotatedTree, AtomAnnotation, BinaryAnnotation, BoolAnnotation,
@@ -7,7 +8,6 @@ use crate::{
         StatementAnnotation, UnaryAnnotation, VarAssignAnnotation, VarDeclAnnotation,
         WhileAnnotation,
     },
-    symbol_table::SymbolTable,
     utils::Style,
 };
 

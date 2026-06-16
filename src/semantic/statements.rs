@@ -1,5 +1,5 @@
 use crate::{
-    common::Span,
+    common::{ERRONEOUS_SPAN, Span},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label, LabelKind},
     parser::{AstNode, AstNodeKind, Program, ReturnStatement, Statements},
     semantic::{
@@ -83,37 +83,25 @@ impl<'a> SemanticAnalyzer<'a> {
         stmt: ReturnStatement,
         return_span: Span,
     ) -> ReturnAnnotation {
+        let expr_span;
+
         let return_expr = if let Some(expr) = stmt.expr {
+            expr_span = expr.span;
             *self.annotate_expression(expr)
         } else {
+            expr_span = ERRONEOUS_SPAN;
             ExpressionAnnotation::Null
         };
 
         let return_type = return_expr.get_type();
 
-        if !self
-            .symbol_table
-            .context_stack
-            .try_set_context_return(return_type.clone())
-        {
-            self.diagnostics.push(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::InvalidControlFlow,
-                location: return_span,
-                msg: "`return` can only be used inside a function".into(),
-
-                labels: vec![Label {
-                    span: return_span,
-                    msg: "not inside a function".into(),
-                    kind: LabelKind::Primary,
-                    paranthesise: false,
-                }],
-
-                notes: vec![
-                    "`return` transfers control to the caller of the enclosing function".into(),
-                    "remove the `return` statement, or move it into a function body".into(),
-                ],
-            })
+        if let Some(diag) = self.symbol_table.context_stack.try_set_context_return(
+            return_type.clone(),
+            return_span,
+            expr_span,
+            true,
+        ) {
+            self.diagnostics.push(diag);
         }
 
         ReturnAnnotation {
@@ -123,47 +111,18 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     pub fn annotate_break_statement(&mut self, span: Span) {
-        if !self.symbol_table.context_stack.try_set_context_break() {
-            self.diagnostics.push(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::InvalidControlFlow,
-                location: span,
-                msg: "`break` can only be used inside a loop".into(),
-
-                labels: vec![Label {
-                    span: span,
-                    msg: "not inside a loop".into(),
-                    kind: LabelKind::Primary,
-                    paranthesise: false,
-                }],
-                notes: vec![
-                    "`break` terminates execution of the enclosing loop".into(),
-                    "remove the `break` statement, or place it inside a loop".into(),
-                ],
-            })
+        if let Some(diag) = self.symbol_table.context_stack.try_set_context_break(span) {
+            self.diagnostics.push(diag)
         }
     }
 
     pub fn annotate_continue_statement(&mut self, span: Span) {
-        if !self.symbol_table.context_stack.try_set_context_continue() {
-            self.diagnostics.push(Diagnostic {
-                severity: DiagnosticSeverity::Error,
-                class: DiagnosticClass::InvalidControlFlow,
-                location: span,
-                msg: "`continue` can only be used inside a loop".into(),
-
-                labels: vec![Label {
-                    span: span,
-                    msg: "not inside a loop".into(),
-                    kind: LabelKind::Primary,
-                    paranthesise: false,
-                }],
-
-                notes: vec![
-                    "`continue` skips the remainder of the current iteration and proceeds to the next one".into(),
-                    "remove the `continue` statement, or place it inside a loop".into(),
-                ],
-            })
+        if let Some(diag) = self
+            .symbol_table
+            .context_stack
+            .try_set_context_continue(span)
+        {
+            self.diagnostics.push(diag)
         }
     }
 }

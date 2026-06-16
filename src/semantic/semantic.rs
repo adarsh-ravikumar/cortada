@@ -1,9 +1,9 @@
 use crate::{
     common::IOFile,
+    context::SymbolTable,
     diagnostic::Diagnostic,
     parser::{AstNode, AstNodeKind},
     semantic::annotated_node::AnnotatedTree,
-    symbol_table::SymbolTable,
 };
 
 pub struct SemanticAnalyzer<'a> {

@@ -1,8 +1,8 @@
 use crate::{
-    common::Span,
+    common::{ERRONEOUS_SPAN, Span},
+    context::{ContextKind, TypeKind},
     parser::{AstNodeKind, FnStatement},
     semantic::{ExpressionAnnotation, FunctionAnnotation, SemanticAnalyzer, VarDeclAnnotation},
-    symbol_table::{ContextKind, TypeKind},
 };
 
 impl<'a, 'scope> SemanticAnalyzer<'a> {
@@ -16,7 +16,7 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
 
         self.symbol_table
             .context_stack
-            .enter_context(ContextKind::Function);
+            .enter_context(ContextKind::function_context());
 
         for param in fn_stmt.params {
             match param.kind {
@@ -38,12 +38,13 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             };
         }
 
-        let mut return_type: TypeKind = TypeKind::Error;
-        let mut return_type_span: Option<Span> = None;
-
         if let Some(ty) = fn_stmt.return_type {
-            return_type_span = Some(ty.span);
-            return_type = self.annotate_type_expression(ty.kind);
+            let span = ty.span;
+            let ty = self.annotate_type_expression(ty.kind);
+
+            self.symbol_table
+                .context_stack
+                .try_set_context_return(ty, span, ERRONEOUS_SPAN, false);
         }
 
         let body = match fn_stmt.body.kind {
@@ -51,13 +52,9 @@ impl<'a, 'scope> SemanticAnalyzer<'a> {
             _ => panic!("body must be statements"),
         };
 
-        let entry = self.symbol_table.create_function(
-            decl_span,
-            fn_stmt.name,
-            param_types,
-            return_type_span,
-            return_type,
-        );
+        let entry = self
+            .symbol_table
+            .create_function(decl_span, fn_stmt.name, param_types);
 
         self.symbol_table.context_stack.exit_context();
 

@@ -77,8 +77,10 @@ impl<'a> Parser<'a> {
             return AstNode::error();
         }
 
-        let start = self.advance().span.start;
-        let end = self.peek(0).span.end;
+        let current = self.advance();
+
+        let start = current.span.start;
+        let end = current.span.end;
 
         if self.peek(0).kind == TokenKind::Newline {
             return AstNode::return_stmt(None, start, end);

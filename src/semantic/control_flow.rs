@@ -1,9 +1,9 @@
 use crate::{
+    context::{ContextKind, TypeKind},
     parser::{AstNode, AstNodeKind, IfStatement, WhileStatement},
     semantic::{
         ElifAnnotation, ExpressionAnnotation, IfAnnotation, SemanticAnalyzer, WhileAnnotation,
     },
-    symbol_table::{ContextKind, TypeKind},
 };
 
 impl<'a> SemanticAnalyzer<'a> {
@@ -27,6 +27,7 @@ impl<'a> SemanticAnalyzer<'a> {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
+
         self.symbol_table.context_stack.exit_context();
 
         let mut elifs: Vec<ElifAnnotation> = Vec::new();
@@ -37,10 +38,12 @@ impl<'a> SemanticAnalyzer<'a> {
             self.symbol_table
                 .context_stack
                 .enter_context(ContextKind::Conditional);
+
             let elif_body = match elif.body.kind {
                 AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
                 _ => unreachable!(),
             };
+
             self.symbol_table.context_stack.exit_context();
 
             elifs.push(ElifAnnotation {
@@ -82,11 +85,13 @@ impl<'a> SemanticAnalyzer<'a> {
 
         self.symbol_table
             .context_stack
-            .enter_context(ContextKind::Loop);
+            .enter_context(ContextKind::loop_context());
+
         let while_body = match statement.body.kind {
             AstNodeKind::Statements(stmts) => self.annotate_statements(stmts),
             _ => panic!("Body must be a statements node"),
         };
+
         self.symbol_table.context_stack.exit_context();
 
         match statement.else_stmt {

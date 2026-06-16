@@ -1,13 +1,13 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{ExpressionAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::{ERRONEOUS_BINDING, SymbolKind};
+use crate::context::{ERRONEOUS_BINDING, SymbolKind};
 use crate::{
     common::Span,
+    context::TypeKind,
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     parser::{VarAssignStatement, VarDeclStatement},
     semantic::{VarAssignAnnotation, VarDeclAnnotation},
-    symbol_table::TypeKind,
 };
 
 impl<'a, 'scope> SemanticAnalyzer<'a> {

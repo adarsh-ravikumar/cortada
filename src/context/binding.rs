@@ -1,6 +1,6 @@
 use crate::{
     common::{ERRONEOUS_SPAN, Span},
-    symbol_table::TypeKind,
+    context::TypeKind,
 };
 
 #[derive(PartialEq, Eq)]

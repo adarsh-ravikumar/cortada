@@ -1,10 +1,11 @@
 use crate::diagnostic::LabelKind;
 use crate::semantic::{IdentifierAnnotation, SemanticAnalyzer};
 
-use crate::symbol_table::SymbolKind;
+use crate::context::SymbolKind;
 
 use crate::{
     common::Span,
+    context::{BuiltinType, TypeKind},
     diagnostic::{Diagnostic, DiagnosticClass, DiagnosticSeverity, Label},
     parser::{AstNode, AstNodeKind, AtomKind, BinaryExpr, UnaryExpr},
     semantic::{
@@ -15,7 +16,6 @@ use crate::{
         },
         operator::{BinaryOpAnnotation, UnaryOpAnnotation},
     },
-    symbol_table::{BuiltinType, TypeKind},
 };
 
 impl<'a> SemanticAnalyzer<'a> {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     common::{ERRONEOUS_SPAN, Span},
-    symbol_table::TypeKind,
+    context::TypeKind,
 };
 
 pub type FunctionId = usize;
